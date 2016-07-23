@@ -1,0 +1,5 @@
+package: github.com/Clever/stealth
+import:
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert
