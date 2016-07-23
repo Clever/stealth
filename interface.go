@@ -8,6 +8,7 @@ import (
 // Credentials needed to authenticate with secrets backend, such as a token
 type Credentials map[string]string
 
+// SecretMeta is metadata to manage a secret
 type SecretMeta struct {
 	Created    time.Time `json:"created"`
 	Expiration time.Time `json:"expiration"`
@@ -15,8 +16,10 @@ type SecretMeta struct {
 	// TODO: Add other useful metadata?
 }
 
+// SecretData is the private data encapsulated by a Secret
 type SecretData map[string]interface{}
 
+// Secret is the unit the secret store
 type Secret struct {
 	// Data is a key-val mapping. (secret1=foo,secret2=bar,...)
 	Data SecretData `json:"data"`

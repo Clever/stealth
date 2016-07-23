@@ -15,6 +15,7 @@ type MemoryStore struct {
 	history map[string]mHistory
 }
 
+// Write saves a secret to the store
 func (s *MemoryStore) Write(key string, value SecretData) error {
 	var (
 		history mHistory
@@ -40,6 +41,7 @@ func (s *MemoryStore) Write(key string, value SecretData) error {
 	return nil
 }
 
+// Read a secret from the store
 func (s *MemoryStore) Read(key string) (Secret, error) {
 	if history, ok := s.history[key]; ok {
 		if history.Revoked {
@@ -50,6 +52,7 @@ func (s *MemoryStore) Read(key string) (Secret, error) {
 	return Secret{}, &KeyNotFoundError{Key: key}
 }
 
+// History gets all historical versions of a secret
 func (s *MemoryStore) History(key string) ([]Secret, error) {
 	if history, ok := s.history[key]; ok {
 		return history.Secrets, nil
@@ -57,6 +60,7 @@ func (s *MemoryStore) History(key string) ([]Secret, error) {
 	return []Secret{}, &KeyNotFoundError{Key: key}
 }
 
+// Revoke makes a secret un-readable, until another Write operation
 func (s *MemoryStore) Revoke(key string) error {
 	if history, ok := s.history[key]; ok {
 		history.Revoked = true
@@ -66,6 +70,7 @@ func (s *MemoryStore) Revoke(key string) error {
 	return &KeyNotFoundError{Key: key}
 }
 
+// NewMemoryStore creates an in-memory secret store
 func NewMemoryStore() SecretStore {
 	return &MemoryStore{
 		history: map[string]mHistory{},
