@@ -17,7 +17,7 @@ type SecretMeta struct {
 }
 
 // SecretData is the private data encapsulated by a Secret
-type SecretData map[string]interface{}
+type SecretData string
 
 // Secret is the unit the secret store
 type Secret struct {

@@ -18,7 +18,7 @@ func TestReadWrite(t *testing.T) {
 	assert.Equal(t, err, &KeyNotFoundError{Key: "foo"})
 
 	t.Log("write a secret")
-	data := SecretData{"bar": "baz"}
+	data := SecretData("bar")
 	err = store.Write("foo", data)
 	assert.NoError(t, err)
 
@@ -40,7 +40,7 @@ func TestHistory(t *testing.T) {
 	assert.Equal(t, err, &KeyNotFoundError{Key: "foo"})
 
 	t.Log("STEP 1: write a secret")
-	data1 := SecretData{"bar": "baz"}
+	data1 := SecretData("bar")
 	err = store.Write("foo", data1)
 	assert.NoError(t, err)
 
@@ -56,7 +56,7 @@ func TestHistory(t *testing.T) {
 	assert.Equal(t, read1.Data, data1)
 
 	t.Log("STEP 2: overwrite the secret")
-	data2 := SecretData{"bim": "bop"}
+	data2 := SecretData("bibimbap")
 	err = store.Write("foo", data2)
 	assert.NoError(t, err)
 
@@ -85,7 +85,7 @@ func TestRevoke(t *testing.T) {
 	assert.Equal(t, err, &KeyNotFoundError{Key: "foo"})
 
 	t.Log("STEP 1: write a secret")
-	data1 := SecretData{"bar": "baz"}
+	data1 := SecretData("bar")
 	err = store.Write("foo", data1)
 	assert.NoError(t, err)
 
@@ -104,7 +104,7 @@ func TestRevoke(t *testing.T) {
 	assert.Equal(t, err, &KeyRevokedError{Key: "foo"})
 
 	t.Log("STEP 3: write the secret again")
-	data2 := SecretData{"bim": "bop"}
+	data2 := SecretData("bibimbap")
 	err = store.Write("foo", data2)
 	assert.NoError(t, err)
 
