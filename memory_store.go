@@ -15,23 +15,20 @@ type MemoryStore struct {
 	history map[string]mHistory
 }
 
-// Write saves a secret to the store
-func (s *MemoryStore) Write(key string, value SecretData) error {
+// Create creates a secret in the store
+func (s *MemoryStore) Create(key string, value SecretData) error {
 	var (
 		history mHistory
 		ok      bool
 	)
 
 	// Initialize secret if does not exist
-	if history, ok = s.history[key]; !ok {
-		s.history[key] = mHistory{
-			Secrets: []Secret{},
-			Revoked: false,
-		}
+	if history, ok = s.history[key]; ok {
+		return &KeyAlreadyExistsError{Key: key}
 	}
 
 	// Append newest version
-	history.Secrets = append(s.history[key].Secrets, Secret{Data: value})
+	history.Secrets = []Secret{Secret{Data: value}}
 	// Mark as non-revoked
 	history.Revoked = false
 
@@ -50,6 +47,29 @@ func (s *MemoryStore) Read(key string) (Secret, error) {
 		return history.Secrets[len(history.Secrets)-1], nil
 	}
 	return Secret{}, &KeyNotFoundError{Key: key}
+}
+
+// Update updates a secret in the secret store
+func (s *MemoryStore) Update(key string, value SecretData) (Secret, error) {
+	var (
+		history mHistory
+		ok      bool
+	)
+
+	// Return error if secret does not exist
+	if history, ok = s.history[key]; !ok {
+		return Secret{}, &KeyNotFoundError{Key: key}
+	}
+
+	// Append newest version
+	history.Secrets = append(s.history[key].Secrets, Secret{Data: value})
+	// Mark as non-revoked
+	history.Revoked = false
+
+	// Save
+	s.history[key] = history
+
+	return Secret{Data: value}, nil
 }
 
 // History gets all historical versions of a secret

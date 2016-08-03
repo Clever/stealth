@@ -3,13 +3,18 @@ package main
 // MockStore is a mocked secret store, for testing
 type MockStore struct{}
 
-// Write (no-op) mocks writing a secret
-func (s *MockStore) Write(key string, value SecretData) error {
+// Create (no-op) mocks creating a secret
+func (s *MockStore) Create(key string, value SecretData) error {
 	return nil
 }
 
 // Read (no-op) mocks reading a secret
 func (s *MockStore) Read(key string) (Secret, error) {
+	return Secret{}, nil
+}
+
+// Update (no-op) mocks updating a secret
+func (s *MockStore) Update(key string, value SecretData) (Secret, error) {
 	return Secret{}, nil
 }
 
