@@ -29,16 +29,19 @@ type Secret struct {
 
 // SecretStore is the CRUD-like interface for Secrets
 type SecretStore interface {
-	// Write a Secret into the store
-	Write(key string, value SecretData) error
+	// Creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
+	Create(key string, value SecretData) error
 
 	// Read a Secret from the store
 	Read(key string) (Secret, error)
 
 	// ReadVersion reads a specific version of a secret from the store
-	//Version is 0-indexed
-	//If version < 0, means “latest” version
-	//ReadVersion(key string, version int)
+	// Version is 0-indexed
+	// If version < 0, means “latest” version
+	// ReadVersion(key string, version int)
+
+	// Updates a Secret from the store and increments version number.
+	Update(key string, value SecretData) (Secret, error)
 
 	// History gets history for a secret, returning all versions from the store
 	History(key string) ([]Secret, error)
@@ -47,7 +50,7 @@ type SecretStore interface {
 	Revoke(key string) error
 }
 
-// KeyNotFoundError occurs when a key cannot be found (during Read, History, or Revoke)
+// KeyNotFoundError occurs when a key cannot be found (during Read, History, Update or Revoke)
 type KeyNotFoundError struct {
 	Key string
 }
@@ -67,6 +70,15 @@ type InvalidKeyError struct {
 }
 
 func (e *InvalidKeyError) Error() string { return fmt.Sprintf("The given key is invalid: %s", e.Key) }
+
+// KeyAlreadyExistsError occurs when Create is called and a key already exists
+type KeyAlreadyExistsError struct {
+	Key string
+}
+
+func (e *KeyAlreadyExistsError) Error() string {
+	return fmt.Sprintf("The key already exists: %s", e.Key)
+}
 
 // AuthenticationError occurs when the given credentials fail to access the secret store
 type AuthenticationError struct{}

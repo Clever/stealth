@@ -9,7 +9,7 @@ import (
 // - keys shouldn't be case sensitive
 // - should fail if key contains invalid chars / format
 
-func TestReadWrite(t *testing.T) {
+func TestCreateRead(t *testing.T) {
 	store := NewMemoryStore()
 
 	t.Log("no secrets exist, to begin")
@@ -19,16 +19,21 @@ func TestReadWrite(t *testing.T) {
 
 	t.Log("write a secret")
 	data := SecretData("bar")
-	err = store.Write("foo", data)
+	err = store.Create("foo", data)
 	assert.NoError(t, err)
 
 	t.Log("we should now be able to read it")
 	secret, err := store.Read("foo")
 	assert.NoError(t, err)
 	assert.Equal(t, secret.Data, data)
+
+	t.Log("creating the secret again fails")
+	err = store.Create("foo", data)
+	assert.Error(t, err)
+	assert.Equal(t, err, &KeyAlreadyExistsError{Key: "foo"})
 }
 
-func TestHistory(t *testing.T) {
+func TestUpdateHistory(t *testing.T) {
 	store := NewMemoryStore()
 
 	t.Log("no secrets exist, to begin")
@@ -38,10 +43,13 @@ func TestHistory(t *testing.T) {
 	_, err = store.History("foo")
 	assert.Error(t, err)
 	assert.Equal(t, err, &KeyNotFoundError{Key: "foo"})
+	data1 := SecretData("bar")
+	_, err = store.Update("foo", data1)
+	assert.Error(t, err)
+	assert.Equal(t, err, &KeyNotFoundError{Key: "foo"})
 
 	t.Log("STEP 1: write a secret")
-	data1 := SecretData("bar")
-	err = store.Write("foo", data1)
+	err = store.Create("foo", data1)
 	assert.NoError(t, err)
 
 	t.Log("we should now see one version in History")
@@ -57,7 +65,7 @@ func TestHistory(t *testing.T) {
 
 	t.Log("STEP 2: overwrite the secret")
 	data2 := SecretData("bibimbap")
-	err = store.Write("foo", data2)
+	_, err = store.Update("foo", data2)
 	assert.NoError(t, err)
 
 	t.Log("we should now see two versions in History")
@@ -86,7 +94,7 @@ func TestRevoke(t *testing.T) {
 
 	t.Log("STEP 1: write a secret")
 	data1 := SecretData("bar")
-	err = store.Write("foo", data1)
+	err = store.Create("foo", data1)
 	assert.NoError(t, err)
 
 	t.Log("Read should return the most recent secret")
@@ -105,7 +113,7 @@ func TestRevoke(t *testing.T) {
 
 	t.Log("STEP 3: write the secret again")
 	data2 := SecretData("bibimbap")
-	err = store.Write("foo", data2)
+	_, err = store.Update("foo", data2)
 	assert.NoError(t, err)
 
 	t.Log("Read should return the most recent secret")
