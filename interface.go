@@ -44,7 +44,7 @@ type SecretStore interface {
 	Update(key string, value SecretData) (Secret, error)
 
 	// History gets history for a secret, returning all versions from the store
-	History(key string) ([]Secret, error)
+	History(key string) ([]SecretMeta, error)
 }
 
 // KeyNotFoundError occurs when a key cannot be found (during Read, History, Update)

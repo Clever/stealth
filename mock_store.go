@@ -19,8 +19,8 @@ func (s *MockStore) Update(key string, value SecretData) (Secret, error) {
 }
 
 // History (no-op) mocks retrieving historical versions of a secret
-func (s *MockStore) History(key string) ([]Secret, error) {
-	return []Secret{}, nil
+func (s *MockStore) History(key string) ([]SecretMeta, error) {
+	return []SecretMeta{}, nil
 }
 
 // NewMockStore creates a mock secret store, with all no-op methods.

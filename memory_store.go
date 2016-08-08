@@ -55,7 +55,8 @@ func (s *MemoryStore) Update(key string, value SecretData) (Secret, error) {
 	}
 
 	// Append newest version
-	history.Secrets = append(s.history[key].Secrets, Secret{Data: value})
+	version := len(history.Secrets)
+	history.Secrets = append(s.history[key].Secrets, Secret{Data: value, Meta: SecretMeta{Version: version}})
 
 	// Save
 	s.history[key] = history
@@ -64,11 +65,15 @@ func (s *MemoryStore) Update(key string, value SecretData) (Secret, error) {
 }
 
 // History gets all historical versions of a secret
-func (s *MemoryStore) History(key string) ([]Secret, error) {
+func (s *MemoryStore) History(key string) ([]SecretMeta, error) {
 	if history, ok := s.history[key]; ok {
-		return history.Secrets, nil
+		secrets := make([]SecretMeta, len(history.Secrets))
+		for index, secret := range history.Secrets {
+			secrets[index] = secret.Meta
+		}
+		return secrets, nil
 	}
-	return []Secret{}, &KeyNotFoundError{Key: key}
+	return []SecretMeta{}, &KeyNotFoundError{Key: key}
 }
 
 // NewMemoryStore creates an in-memory secret store

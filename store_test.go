@@ -56,7 +56,7 @@ func TestUpdateHistory(t *testing.T) {
 	hist1, err := store.History("foo")
 	assert.NoError(t, err)
 	assert.Equal(t, len(hist1), 1)
-	assert.Equal(t, hist1[0].Data, data1)
+	assert.Equal(t, hist1[0].Version, 0)
 
 	t.Log("Read should return the most recent secret")
 	read1, err := store.Read("foo")
@@ -72,8 +72,8 @@ func TestUpdateHistory(t *testing.T) {
 	hist2, err := store.History("foo")
 	assert.NoError(t, err)
 	assert.Equal(t, len(hist2), 2)
-	assert.Equal(t, hist2[0].Data, data1)
-	assert.Equal(t, hist2[1].Data, data2)
+	assert.Equal(t, hist2[0].Version, 0)
+	assert.Equal(t, hist2[1].Version, 1)
 
 	t.Log("Read should return the most recent secret")
 	read2, err := store.Read("foo")
