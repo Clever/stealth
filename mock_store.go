@@ -23,11 +23,6 @@ func (s *MockStore) History(key string) ([]Secret, error) {
 	return []Secret{}, nil
 }
 
-// Revoke (no-op) mocks revoking a secret
-func (s *MockStore) Revoke(key string) error {
-	return nil
-}
-
 // NewMockStore creates a mock secret store, with all no-op methods.
 func NewMockStore() SecretStore {
 	return &MockStore{}

@@ -4,8 +4,6 @@ package main
 type mHistory struct {
 	// Secrets contains all versions of a secret
 	Secrets []Secret
-	// Revoked is whether or not a secret has been revoked
-	Revoked bool
 }
 
 // TODO: Grab a lock whenever manipulating any key
@@ -29,8 +27,6 @@ func (s *MemoryStore) Create(key string, value SecretData) error {
 
 	// Append newest version
 	history.Secrets = []Secret{Secret{Data: value}}
-	// Mark as non-revoked
-	history.Revoked = false
 
 	// Save
 	s.history[key] = history
@@ -41,9 +37,6 @@ func (s *MemoryStore) Create(key string, value SecretData) error {
 // Read a secret from the store
 func (s *MemoryStore) Read(key string) (Secret, error) {
 	if history, ok := s.history[key]; ok {
-		if history.Revoked {
-			return Secret{}, &KeyRevokedError{Key: key}
-		}
 		return history.Secrets[len(history.Secrets)-1], nil
 	}
 	return Secret{}, &KeyNotFoundError{Key: key}
@@ -63,8 +56,6 @@ func (s *MemoryStore) Update(key string, value SecretData) (Secret, error) {
 
 	// Append newest version
 	history.Secrets = append(s.history[key].Secrets, Secret{Data: value})
-	// Mark as non-revoked
-	history.Revoked = false
 
 	// Save
 	s.history[key] = history
@@ -78,16 +69,6 @@ func (s *MemoryStore) History(key string) ([]Secret, error) {
 		return history.Secrets, nil
 	}
 	return []Secret{}, &KeyNotFoundError{Key: key}
-}
-
-// Revoke makes a secret un-readable, until another Write operation
-func (s *MemoryStore) Revoke(key string) error {
-	if history, ok := s.history[key]; ok {
-		history.Revoked = true
-		s.history[key] = history
-		return nil
-	}
-	return &KeyNotFoundError{Key: key}
 }
 
 // NewMemoryStore creates an in-memory secret store

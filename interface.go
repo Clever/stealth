@@ -45,24 +45,14 @@ type SecretStore interface {
 
 	// History gets history for a secret, returning all versions from the store
 	History(key string) ([]Secret, error)
-
-	// Revoke a Secret from the store. History will still be available, but a Read operation will error.
-	Revoke(key string) error
 }
 
-// KeyNotFoundError occurs when a key cannot be found (during Read, History, Update or Revoke)
+// KeyNotFoundError occurs when a key cannot be found (during Read, History, Update)
 type KeyNotFoundError struct {
 	Key string
 }
 
 func (e *KeyNotFoundError) Error() string { return fmt.Sprintf("Key not found: %s", e.Key) }
-
-// KeyRevokedError occurs when a key was revoked, and no later Write operations have occured
-type KeyRevokedError struct {
-	Key string
-}
-
-func (e *KeyRevokedError) Error() string { return fmt.Sprintf("Key was revoked: %s", e.Key) }
 
 // InvalidKeyError occurs when a malformed key argument is given to a SecretStore method
 type InvalidKeyError struct {
