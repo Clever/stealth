@@ -1,4 +1,4 @@
-package main
+package store
 
 // MockStore is a mocked secret store, for testing
 type MockStore struct{}

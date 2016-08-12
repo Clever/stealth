@@ -1,4 +1,4 @@
-package main
+package store
 
 // mHistory has all versions of a secret, and its revocation status
 type mHistory struct {
