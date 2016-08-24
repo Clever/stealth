@@ -16,58 +16,78 @@ type SecretMeta struct {
 	// TODO: Add other useful metadata?
 }
 
-// SecretData is the private data encapsulated by a Secret
-type SecretData string
-
 // Secret is the unit the secret store
 type Secret struct {
-	// Data is a key-val mapping. (secret1=foo,secret2=bar,...)
-	Data SecretData `json:"data"`
-	// Meta is
+	// Data is the actual secret value
+	Data string `json:"data"`
+	// Meta is the information about the secret
 	Meta SecretMeta `json:"meta"`
+}
+
+// SecretIdentifier is a lookup key for a secret, including the environment name, the service name, and the specific key
+type SecretIdentifier struct {
+	Environment, Service, Key string
+}
+
+func (id SecretIdentifier) String() string {
+	return fmt.Sprintf("%s.%s.%s", id.Environment, id.Service, id.Key)
 }
 
 // SecretStore is the CRUD-like interface for Secrets
 type SecretStore interface {
 	// Creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
-	Create(key string, value SecretData) error
+	Create(id SecretIdentifier, value string) error
 
 	// Read a Secret from the store
-	Read(key string) (Secret, error)
+	Read(id SecretIdentifier) (Secret, error)
 
 	// ReadVersion reads a specific version of a secret from the store
 	// Version is 0-indexed
 	// If version < 0, means “latest” version
-	// ReadVersion(key string, version int)
+	ReadVersion(id SecretIdentifier, version int) (Secret, error)
 
 	// Updates a Secret from the store and increments version number.
-	Update(key string, value SecretData) (Secret, error)
+	Update(id SecretIdentifier, value string) (Secret, error)
 
 	// History gets history for a secret, returning all versions from the store
-	History(key string) ([]SecretMeta, error)
+	History(id SecretIdentifier) ([]SecretMeta, error)
 }
 
-// KeyNotFoundError occurs when a key cannot be found (during Read, History, Update)
-type KeyNotFoundError struct {
-	Key string
+// IdentifierNotFoundError occurs when a secret identifier cannot be found (during Read, History, Update)
+type IdentifierNotFoundError struct {
+	Identifier SecretIdentifier
 }
 
-func (e *KeyNotFoundError) Error() string { return fmt.Sprintf("Key not found: %s", e.Key) }
-
-// InvalidKeyError occurs when a malformed key argument is given to a SecretStore method
-type InvalidKeyError struct {
-	Key string
+func (e *IdentifierNotFoundError) Error() string {
+	return fmt.Sprintf("Identifier not found: %s", e.Identifier)
 }
 
-func (e *InvalidKeyError) Error() string { return fmt.Sprintf("The given key is invalid: %s", e.Key) }
-
-// KeyAlreadyExistsError occurs when Create is called and a key already exists
-type KeyAlreadyExistsError struct {
-	Key string
+// InvalidIdentifierError occurs when a malformed identifier argument is given to a SecretStore method
+type InvalidIdentifierError struct {
+	Identifier SecretIdentifier
 }
 
-func (e *KeyAlreadyExistsError) Error() string {
-	return fmt.Sprintf("The key already exists: %s", e.Key)
+func (e *InvalidIdentifierError) Error() string {
+	return fmt.Sprintf("The given identifier is invalid: %s", e.Identifier)
+}
+
+// IdentifierAlreadyExistsError occurs when Create is called and an identifier already exists
+type IdentifierAlreadyExistsError struct {
+	Identifier SecretIdentifier
+}
+
+func (e *IdentifierAlreadyExistsError) Error() string {
+	return fmt.Sprintf("The identifier already exists: %s", e.Identifier)
+}
+
+// VersionNotFoundError occurs when a secret version cannot be found (during ReadVersion)
+type VersionNotFoundError struct {
+	Identifier SecretIdentifier
+	Version    int
+}
+
+func (e *VersionNotFoundError) Error() string {
+	return fmt.Sprintf("Version %d not found for identifier: %s", e.Version, e.Identifier)
 }
 
 // AuthenticationError occurs when the given credentials fail to access the secret store
@@ -79,9 +99,9 @@ func (e *AuthenticationError) Error() string {
 
 // AuthorizationError occurs when a user lacks sufficient access to interact with a Secret (read-only? read/write?)
 type AuthorizationError struct {
-	Key string
+	Identifier SecretIdentifier
 }
 
 func (e *AuthorizationError) Error() string {
-	return fmt.Sprintf("Unauthorized to access secret with key: %s", e.Key)
+	return fmt.Sprintf("Unauthorized to access secret with identifier: %s", e.Identifier)
 }
