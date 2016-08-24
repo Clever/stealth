@@ -6,79 +6,88 @@ type mHistory struct {
 	Secrets []Secret
 }
 
-// TODO: Grab a lock whenever manipulating any key
-
 // MemoryStore is an in-memory secret store, for testing
 type MemoryStore struct {
-	history map[string]mHistory
+	history map[SecretIdentifier]mHistory
 }
 
 // Create creates a secret in the store
-func (s *MemoryStore) Create(key string, value SecretData) error {
+func (s *MemoryStore) Create(id SecretIdentifier, value string) error {
 	var (
 		history mHistory
 		ok      bool
 	)
 
 	// Initialize secret if does not exist
-	if history, ok = s.history[key]; ok {
-		return &KeyAlreadyExistsError{Key: key}
+	if history, ok = s.history[id]; ok {
+		return &IdentifierAlreadyExistsError{Identifier: id}
 	}
 
 	// Append newest version
 	history.Secrets = []Secret{Secret{Data: value}}
 
 	// Save
-	s.history[key] = history
+	s.history[id] = history
 
 	return nil
 }
 
 // Read a secret from the store
-func (s *MemoryStore) Read(key string) (Secret, error) {
-	if history, ok := s.history[key]; ok {
+func (s *MemoryStore) Read(id SecretIdentifier) (Secret, error) {
+	if history, ok := s.history[id]; ok {
 		return history.Secrets[len(history.Secrets)-1], nil
 	}
-	return Secret{}, &KeyNotFoundError{Key: key}
+	return Secret{}, &IdentifierNotFoundError{Identifier: id}
+}
+
+// ReadVersion reads a version of a secret
+func (s *MemoryStore) ReadVersion(id SecretIdentifier, version int) (Secret, error) {
+	if history, ok := s.history[id]; ok {
+		if len(history.Secrets) > version && version >= 0 {
+			return history.Secrets[version], nil
+		}
+		return Secret{}, &VersionNotFoundError{Version: version, Identifier: id}
+	}
+	return Secret{}, &IdentifierNotFoundError{Identifier: id}
 }
 
 // Update updates a secret in the secret store
-func (s *MemoryStore) Update(key string, value SecretData) (Secret, error) {
+func (s *MemoryStore) Update(id SecretIdentifier, value string) (Secret, error) {
 	var (
 		history mHistory
 		ok      bool
 	)
 
 	// Return error if secret does not exist
-	if history, ok = s.history[key]; !ok {
-		return Secret{}, &KeyNotFoundError{Key: key}
+	if history, ok = s.history[id]; !ok {
+		return Secret{}, &IdentifierNotFoundError{Identifier: id}
 	}
 
 	// Append newest version
 	version := len(history.Secrets)
-	history.Secrets = append(s.history[key].Secrets, Secret{Data: value, Meta: SecretMeta{Version: version}})
+	history.Secrets = append(s.history[id].Secrets, Secret{Data: value, Meta: SecretMeta{Version: version}})
 
 	// Save
-	s.history[key] = history
+	s.history[id] = history
 
 	return Secret{Data: value}, nil
 }
 
 // History gets all historical versions of a secret
-func (s *MemoryStore) History(key string) ([]SecretMeta, error) {
-	if history, ok := s.history[key]; ok {
+func (s *MemoryStore) History(id SecretIdentifier) ([]SecretMeta, error) {
+	if history, ok := s.history[id]; ok {
 		secrets := make([]SecretMeta, len(history.Secrets))
 		for index, secret := range history.Secrets {
 			secrets[index] = secret.Meta
 		}
 		return secrets, nil
 	}
-	return []SecretMeta{}, &KeyNotFoundError{Key: key}
+	return []SecretMeta{}, &IdentifierNotFoundError{Identifier: id}
 }
 
 // NewMemoryStore creates an in-memory secret store
 func NewMemoryStore() SecretStore {
 	return &MemoryStore{
-		history: map[string]mHistory{},
+		history: map[SecretIdentifier]mHistory{},
 	}
 }
