@@ -1,4 +1,5 @@
 type: library
 shepherds:
 - "nathan.leiby@clever.com"
+- "alex.smolen@clever.com"
 team: "eng-infra"
