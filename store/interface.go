@@ -24,13 +24,18 @@ type Secret struct {
 	Meta SecretMeta `json:"meta"`
 }
 
-// SecretIdentifier is a lookup key for a secret, including the environment name, the service name, and the specific key
+// SecretIdentifier is a lookup key for a secret, including the production flag, the service name, and the specific key
 type SecretIdentifier struct {
-	Environment, Service, Key string
+	Production   bool
+	Service, Key string
 }
 
 func (id SecretIdentifier) String() string {
-	return fmt.Sprintf("%s.%s.%s", id.Environment, id.Service, id.Key)
+	environment := "production"
+	if !id.Production {
+		environment = "development"
+	}
+	return fmt.Sprintf("%s.%s.%s", environment, id.Service, id.Key)
 }
 
 // SecretStore is the CRUD-like interface for Secrets
