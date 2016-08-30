@@ -21,7 +21,7 @@ func stores() map[string]SecretStore {
 }
 
 func getRandomTestSecretIdentifier() SecretIdentifier {
-	return SecretIdentifier{Production: false, Service: "test", Key: randSeq(10)}
+	return SecretIdentifier{Environment: DroneTestEnvironment, Service: "test", Key: randSeq(10)}
 }
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -36,13 +36,13 @@ func randSeq(n int) string {
 }
 
 func deleteUnicredsSecret(id SecretIdentifier) {
-	unicreds.DeleteSecret(&DevPath, id.String())
+	unicreds.DeleteSecret(DroneTest.UnicredsPath, id.String())
 }
 
 func TestIdentifer(t *testing.T) {
-	id := SecretIdentifier{Production: false, Service: "service", Key: "foo"}
-	assert.Equal(t, id.String(), "development.service.foo")
-	assert.Equal(t, fmt.Sprintf("%s", id), "development.service.foo")
+	id := SecretIdentifier{Environment: DroneTestEnvironment, Service: "service", Key: "foo"}
+	assert.Equal(t, id.String(), "drone-test.service.foo")
+	assert.Equal(t, fmt.Sprintf("%s", id), "drone-test.service.foo")
 }
 
 func TestCreateRead(t *testing.T) {

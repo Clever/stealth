@@ -11,30 +11,30 @@ import (
 
 // UnicredsStore is a secret store pointing at a prod and dev unicreds (https://github.com/Clever/unicreds) backend
 type UnicredsStore struct {
-	Production  *UnicredsConfig
-	Development *UnicredsConfig
+	Environments map[int]UnicredsConfig
 }
 
 // Region is default region for unicreds config
 var Region = "us-west-1"
-
-// ProdPath is default prod DynamoDB path
-var ProdPath = "stealth"
-
-// ProdKey is default prod KMS key
-const ProdKey = "alias/stealth-key"
-
-// DevPath is default dev DynamoDB path
-var DevPath = "stealth-dev"
-
-// DevKey is default dev KMS key
-const DevKey = "alias/stealth-key-dev"
 
 // UnicredsConfig stores the configuration for a unicreds KMS and DynamoDB
 type UnicredsConfig struct {
 	UnicredsPath  *string
 	UnicredsAlias string
 }
+
+const prodKey, devKey, droneTestKey = "alias/stealth-key", "alias/stealth-key-dev", "alias/stealth-key-drone-test"
+
+var prodPath, devPath, droneTestPath = "stealth", "stealth-dev", "stealth-drone-test"
+
+// Production is the production unicreds config
+var Production = UnicredsConfig{UnicredsPath: &prodPath, UnicredsAlias: prodKey}
+
+// Development is the dev unicreds config
+var Development = UnicredsConfig{UnicredsPath: &devPath, UnicredsAlias: devKey}
+
+// DroneTest is the drone-test unicreds config
+var DroneTest = UnicredsConfig{UnicredsPath: &droneTestPath, UnicredsAlias: droneTestKey}
 
 // MalformedVersionError occurs when a secret version is malformed
 type MalformedVersionError struct {
@@ -54,17 +54,11 @@ func getEncryptionContext(id SecretIdentifier) *unicreds.EncryptionContextValue 
 }
 
 func (s *UnicredsStore) path(id SecretIdentifier) *string {
-	if id.Production {
-		return s.Production.UnicredsPath
-	}
-	return s.Development.UnicredsPath
+	return s.Environments[id.Environment].UnicredsPath
 }
 
 func (s *UnicredsStore) alias(id SecretIdentifier) string {
-	if id.Production {
-		return s.Production.UnicredsAlias
-	}
-	return s.Development.UnicredsAlias
+	return s.Environments[id.Environment].UnicredsAlias
 }
 
 // Create creates a key in the unicreds store
@@ -146,7 +140,9 @@ func (s *UnicredsStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 func NewUnicredsStore() SecretStore {
 	log.SetHandler(json.New(os.Stderr))
 	unicreds.SetAwsConfig(&Region, nil)
-	development := UnicredsConfig{UnicredsPath: &DevPath, UnicredsAlias: DevKey}
-	production := UnicredsConfig{UnicredsPath: &ProdPath, UnicredsAlias: ProdKey}
-	return &UnicredsStore{Production: &production, Development: &development}
+	environments := make(map[int]UnicredsConfig)
+	environments[ProductionEnvironment] = Production
+	environments[DevelopmentEnvironment] = Development
+	environments[DroneTestEnvironment] = DroneTest
+	return &UnicredsStore{Environments: environments}
 }
