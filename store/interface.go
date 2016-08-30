@@ -24,18 +24,35 @@ type Secret struct {
 	Meta SecretMeta `json:"meta"`
 }
 
+const (
+	// ProductionEnvironment is an index for prod
+	ProductionEnvironment = iota
+	// DevelopmentEnvironment is an index for dev
+	DevelopmentEnvironment
+	// DroneTestEnvironment is an index for drone-test
+	DroneTestEnvironment
+)
+
 // SecretIdentifier is a lookup key for a secret, including the production flag, the service name, and the specific key
 type SecretIdentifier struct {
-	Production   bool
+	Environment  int
 	Service, Key string
 }
 
-func (id SecretIdentifier) String() string {
-	environment := "production"
-	if !id.Production {
-		environment = "development"
+// EnvironmentString returns the environment used for the secret identifier, as a string
+func (id SecretIdentifier) EnvironmentString() string {
+	if id.Environment == ProductionEnvironment {
+		return "production"
+	} else if id.Environment == DevelopmentEnvironment {
+		return "development"
+	} else {
+		return "drone-test"
 	}
-	return fmt.Sprintf("%s.%s.%s", environment, id.Service, id.Key)
+}
+
+// String() returns the key used for the secret identifier
+func (id SecretIdentifier) String() string {
+	return fmt.Sprintf("%s.%s.%s", id.EnvironmentString(), id.Service, id.Key)
 }
 
 // SecretStore is the CRUD-like interface for Secrets
