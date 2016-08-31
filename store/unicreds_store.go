@@ -84,7 +84,7 @@ func (s *UnicredsStore) Read(id SecretIdentifier) (Secret, error) {
 	if err != nil {
 		return Secret{}, &MalformedVersionError{Identifier: id, MalformedVersion: secret.Version}
 	}
-	return Secret{secret.Secret, SecretMeta{Version: version, Created: time.Unix(0, secret.CreatedAt)}}, nil
+	return Secret{secret.Secret, SecretMeta{Version: version, Created: time.Unix(secret.CreatedAt, 0)}}, nil
 }
 
 // ReadVersion reads a version of a secret
@@ -97,7 +97,7 @@ func (s *UnicredsStore) ReadVersion(id SecretIdentifier, version int) (Secret, e
 		}
 		return Secret{}, &VersionNotFoundError{Identifier: id, Version: version}
 	}
-	return Secret{secret.Secret, SecretMeta{Version: version, Created: time.Unix(0, secret.CreatedAt)}}, nil
+	return Secret{secret.Secret, SecretMeta{Version: version, Created: time.Unix(secret.CreatedAt, 0)}}, nil
 }
 
 // Update writes a new version of the key
@@ -158,7 +158,7 @@ func (s *UnicredsStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 			if err != nil {
 				return []SecretMeta{}, &MalformedVersionError{Identifier: id, MalformedVersion: secret.Version}
 			}
-			secretMetas[version] = SecretMeta{Version: version, Created: time.Unix(0, secret.CreatedAt)}
+			secretMetas[version] = SecretMeta{Version: version, Created: time.Unix(secret.CreatedAt, 0)}
 		}
 	}
 	if versions == 0 {
