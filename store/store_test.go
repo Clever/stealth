@@ -149,8 +149,6 @@ func TestCreateList(t *testing.T) {
 		ids, err = store.List(DroneTestEnvironment, "test2")
 		assert.NoError(t, err)
 		assert.Equal(t, ids, []SecretIdentifier{s2id1})
-
-		// TODO: how should they be sorted?
 	}
 }
 

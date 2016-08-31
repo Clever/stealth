@@ -80,7 +80,6 @@ func (id SecretIdentifier) String() string {
 	return fmt.Sprintf("%s.%s.%s", id.EnvironmentString(), id.Service, id.Key)
 }
 
-// TODO: Add tests for back and forth, also check for invalid secret identifier string
 // stringToSecretIdentifier() returns the key used for the secret identifier
 func stringToSecretIdentifier(s string) (SecretIdentifier, error) {
 	parts := strings.SplitN(s, ".", 3)
