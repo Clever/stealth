@@ -1,6 +1,9 @@
 package store
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 // mHistory has all versions of a secret, and its revocation status
 type mHistory struct {
@@ -88,6 +91,7 @@ func (s *MemoryStore) List(env int, service string) ([]SecretIdentifier, error) 
 			results = append(results, id)
 		}
 	}
+	sort.Sort(ByIDString(results))
 	return results, nil
 }
 

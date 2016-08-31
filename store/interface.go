@@ -169,3 +169,16 @@ type AuthorizationError struct {
 func (e *AuthorizationError) Error() string {
 	return fmt.Sprintf("Unauthorized to access secret with identifier: %s", e.Identifier)
 }
+
+// ByIDString allows sorting SecretIdentifiers by Key
+type ByIDString []SecretIdentifier
+
+func (s ByIDString) Len() int {
+	return len(s)
+}
+func (s ByIDString) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+func (s ByIDString) Less(i, j int) bool {
+	return s[i].String() < s[j].String()
+}

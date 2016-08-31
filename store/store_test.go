@@ -2,11 +2,13 @@ package store
 
 import (
 	"fmt"
-	"github.com/Clever/unicreds"
-	"github.com/stretchr/testify/assert"
 	"math/rand"
+	"sort"
 	"testing"
 	"time"
+
+	"github.com/Clever/unicreds"
+	"github.com/stretchr/testify/assert"
 )
 
 // Other possible tests
@@ -139,7 +141,9 @@ func TestCreateList(t *testing.T) {
 		t.Log("we should now be able to list 2 secret ids for service 1")
 		ids, err = store.List(DroneTestEnvironment, "test")
 		assert.NoError(t, err)
-		assert.Equal(t, ids, []SecretIdentifier{s1id1, s1id2})
+		expectedIds := []SecretIdentifier{s1id1, s1id2}
+		sort.Sort(ByIDString(expectedIds))
+		assert.Equal(t, ids, expectedIds)
 
 		t.Log("we should now be able to list 1 secret id for service 2")
 		ids, err = store.List(DroneTestEnvironment, "test2")

@@ -2,11 +2,13 @@ package store
 
 import (
 	"fmt"
+	"os"
+	"sort"
+	"strconv"
+
 	"github.com/Clever/unicreds"
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/json"
-	"os"
-	"strconv"
 )
 
 // UnicredsStore is a secret store pointing at a prod and dev unicreds (https://github.com/Clever/unicreds) backend
@@ -135,6 +137,7 @@ func (s *UnicredsStore) List(env int, service string) ([]SecretIdentifier, error
 			results = append(results, id)
 		}
 	}
+	sort.Sort(ByIDString(results))
 	return results, nil
 }
 
