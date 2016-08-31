@@ -5,6 +5,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/Clever/unicreds"
 	"github.com/apex/log"
@@ -83,7 +84,7 @@ func (s *UnicredsStore) Read(id SecretIdentifier) (Secret, error) {
 	if err != nil {
 		return Secret{}, &MalformedVersionError{Identifier: id, MalformedVersion: secret.Version}
 	}
-	return Secret{secret.Secret, SecretMeta{Version: version}}, nil
+	return Secret{secret.Secret, SecretMeta{Version: version, Created: time.Unix(0, secret.CreatedAt)}}, nil
 }
 
 // ReadVersion reads a version of a secret
@@ -96,7 +97,7 @@ func (s *UnicredsStore) ReadVersion(id SecretIdentifier, version int) (Secret, e
 		}
 		return Secret{}, &VersionNotFoundError{Identifier: id, Version: version}
 	}
-	return Secret{secret.Secret, SecretMeta{Version: version}}, nil
+	return Secret{secret.Secret, SecretMeta{Version: version, Created: time.Unix(0, secret.CreatedAt)}}, nil
 }
 
 // Update writes a new version of the key
@@ -110,7 +111,7 @@ func (s *UnicredsStore) Update(id SecretIdentifier, value string) (Secret, error
 		return Secret{}, err
 	}
 	err = unicreds.PutSecret(s.path(id), s.alias(id), id.String(), value, nextVersion, getEncryptionContext(id))
-	return Secret{value, SecretMeta{Version: secret.Meta.Version + 1}}, nil
+	return Secret{value, SecretMeta{Version: secret.Meta.Version + 1, Created: secret.Meta.Created}}, nil
 }
 
 // List gets all secrets in a namespace
@@ -157,7 +158,7 @@ func (s *UnicredsStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 			if err != nil {
 				return []SecretMeta{}, &MalformedVersionError{Identifier: id, MalformedVersion: secret.Version}
 			}
-			secretMetas[version] = SecretMeta{Version: version}
+			secretMetas[version] = SecretMeta{Version: version, Created: time.Unix(0, secret.CreatedAt)}
 		}
 	}
 	if versions == 0 {
