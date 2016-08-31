@@ -47,7 +47,7 @@ func TestIdentifer(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("%s", id), "drone-test.service.foo")
 }
 
-func testStringToSecretIdentifier(t *testing.T) {
+func TestStringToSecretIdentifier(t *testing.T) {
 	t.Log("works for all valid environments")
 	for _, env := range []int{DroneTestEnvironment, DevelopmentEnvironment, ProductionEnvironment} {
 		id := SecretIdentifier{Environment: env, Service: "service", Key: "foo"}
@@ -62,9 +62,10 @@ func testStringToSecretIdentifier(t *testing.T) {
 	_, err := stringToSecretIdentifier(id.String())
 	assert.Error(t, err)
 
-	t.Log("errors on '.' in key name")
 	id = SecretIdentifier{Environment: DroneTestEnvironment, Service: "service", Key: "foo.bar"}
-	_, err = stringToSecretIdentifier(id.String())
+	idString := id.String()
+	t.Log(fmt.Sprintf("errors on '.' in key name: %s", idString))
+	_, err = stringToSecretIdentifier(idString)
 	assert.Error(t, err)
 }
 

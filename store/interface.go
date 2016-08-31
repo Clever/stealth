@@ -46,9 +46,11 @@ func (id SecretIdentifier) EnvironmentString() string {
 		return "production"
 	} else if id.Environment == DevelopmentEnvironment {
 		return "development"
-	} else {
+	} else if id.Environment == DroneTestEnvironment {
 		return "drone-test"
 	}
+	// Error
+	return ""
 }
 
 // isValidEnvironmentInt checks if an int is among our supported environments.
@@ -82,7 +84,7 @@ func (id SecretIdentifier) String() string {
 
 // stringToSecretIdentifier() returns the key used for the secret identifier
 func stringToSecretIdentifier(s string) (SecretIdentifier, error) {
-	parts := strings.SplitN(s, ".", 3)
+	parts := strings.SplitN(s, ".", 4)
 	if len(parts) != 3 {
 		return SecretIdentifier{}, fmt.Errorf("unable to create SecretIdentifier from string -- couldn't split: %s", s)
 	}
