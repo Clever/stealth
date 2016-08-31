@@ -49,7 +49,7 @@ func TestIdentifer(t *testing.T) {
 
 func TestStringToSecretIdentifier(t *testing.T) {
 	t.Log("works for all valid environments")
-	for _, env := range []int{DroneTestEnvironment, DevelopmentEnvironment, ProductionEnvironment} {
+	for _, env := range []Environment{DroneTestEnvironment, DevelopmentEnvironment, ProductionEnvironment} {
 		id := SecretIdentifier{Environment: env, Service: "service", Key: "foo"}
 		idFromString, err := stringToSecretIdentifier(id.String())
 		assert.NoError(t, err)

@@ -13,7 +13,7 @@ import (
 
 // UnicredsStore is a secret store pointing at a prod and dev unicreds (https://github.com/Clever/unicreds) backend
 type UnicredsStore struct {
-	Environments map[int]UnicredsConfig
+	Environments map[Environment]UnicredsConfig
 }
 
 // Region is default region for unicreds config
@@ -114,7 +114,7 @@ func (s *UnicredsStore) Update(id SecretIdentifier, value string) (Secret, error
 }
 
 // List gets all secrets in a namespace
-func (s *UnicredsStore) List(env int, service string) ([]SecretIdentifier, error) {
+func (s *UnicredsStore) List(env Environment, service string) ([]SecretIdentifier, error) {
 	// validate environment; avoids a panic looking up Unicreds path below
 	if !isValidEnvironmentInt(env) {
 		return []SecretIdentifier{}, fmt.Errorf("env %d is invalid", env)
@@ -170,7 +170,7 @@ func (s *UnicredsStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 func NewUnicredsStore() SecretStore {
 	log.SetHandler(json.New(os.Stderr))
 	unicreds.SetAwsConfig(&Region, nil)
-	environments := make(map[int]UnicredsConfig)
+	environments := make(map[Environment]UnicredsConfig)
 	environments[ProductionEnvironment] = Production
 	environments[DevelopmentEnvironment] = Development
 	environments[DroneTestEnvironment] = DroneTest

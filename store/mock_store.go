@@ -24,7 +24,7 @@ func (s *MockStore) Update(id SecretIdentifier, value string) (Secret, error) {
 }
 
 // List (no-op) mocks listing all secrets in a namespace
-func (s *MockStore) List(env int, service string) ([]SecretIdentifier, error) {
+func (s *MockStore) List(env Environment, service string) ([]SecretIdentifier, error) {
 	return []SecretIdentifier{}, nil
 }
 

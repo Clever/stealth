@@ -25,9 +25,12 @@ type Secret struct {
 	Meta SecretMeta `json:"meta"`
 }
 
+// Environment is an Enum to access different Stealth stores
+type Environment int
+
 const (
 	// ProductionEnvironment is an index for prod
-	ProductionEnvironment = iota
+	ProductionEnvironment Environment = iota
 	// DevelopmentEnvironment is an index for dev
 	DevelopmentEnvironment
 	// DroneTestEnvironment is an index for drone-test
@@ -36,7 +39,7 @@ const (
 
 // SecretIdentifier is a lookup key for a secret, including the production flag, the service name, and the specific key
 type SecretIdentifier struct {
-	Environment  int
+	Environment  Environment
 	Service, Key string
 }
 
@@ -55,9 +58,9 @@ func (id SecretIdentifier) EnvironmentString() string {
 
 // isValidEnvironmentInt checks if an int is among our supported environments.
 // Our environments are represented as an enum
-func isValidEnvironmentInt(i int) bool {
-	for _, val := range []int{ProductionEnvironment, DevelopmentEnvironment, DroneTestEnvironment} {
-		if i == val {
+func isValidEnvironmentInt(env Environment) bool {
+	for _, val := range []Environment{ProductionEnvironment, DevelopmentEnvironment, DroneTestEnvironment} {
+		if env == val {
 			return true
 		}
 	}
@@ -66,7 +69,7 @@ func isValidEnvironmentInt(i int) bool {
 
 // environmentStringToInt converts a string like "production" into the corresponding environment int.
 // Our environments are represented as an Enum.
-func environmentStringToInt(s string) (int, error) {
+func environmentStringToInt(s string) (Environment, error) {
 	if s == "production" {
 		return ProductionEnvironment, nil
 	} else if s == "development" {
@@ -111,7 +114,7 @@ type SecretStore interface {
 	Update(id SecretIdentifier, value string) (Secret, error)
 
 	// List gets secrets within a namespace (env/service)>
-	List(env int, service string) ([]SecretIdentifier, error)
+	List(env Environment, service string) ([]SecretIdentifier, error)
 
 	// History gets history for a secret, returning all versions from the store.
 	History(id SecretIdentifier) ([]SecretMeta, error)

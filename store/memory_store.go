@@ -79,7 +79,7 @@ func (s *MemoryStore) Update(id SecretIdentifier, value string) (Secret, error) 
 }
 
 // List gets all secret identifiers within a namespace
-func (s *MemoryStore) List(env int, service string) ([]SecretIdentifier, error) {
+func (s *MemoryStore) List(env Environment, service string) ([]SecretIdentifier, error) {
 	// validate environment; avoids a panic looking up Unicreds path below
 	if !isValidEnvironmentInt(env) {
 		return []SecretIdentifier{}, fmt.Errorf("env %d is invalid", env)
