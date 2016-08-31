@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -24,9 +25,12 @@ type Secret struct {
 	Meta SecretMeta `json:"meta"`
 }
 
+// Environment is an Enum to access different Stealth stores
+type Environment int
+
 const (
 	// ProductionEnvironment is an index for prod
-	ProductionEnvironment = iota
+	ProductionEnvironment Environment = iota
 	// DevelopmentEnvironment is an index for dev
 	DevelopmentEnvironment
 	// DroneTestEnvironment is an index for drone-test
@@ -35,7 +39,7 @@ const (
 
 // SecretIdentifier is a lookup key for a secret, including the production flag, the service name, and the specific key
 type SecretIdentifier struct {
-	Environment  int
+	Environment  Environment
 	Service, Key string
 }
 
@@ -45,9 +49,35 @@ func (id SecretIdentifier) EnvironmentString() string {
 		return "production"
 	} else if id.Environment == DevelopmentEnvironment {
 		return "development"
-	} else {
+	} else if id.Environment == DroneTestEnvironment {
 		return "drone-test"
 	}
+	// Error
+	return ""
+}
+
+// isValidEnvironmentInt checks if an int is among our supported environments.
+// Our environments are represented as an enum
+func isValidEnvironmentInt(env Environment) bool {
+	for _, val := range []Environment{ProductionEnvironment, DevelopmentEnvironment, DroneTestEnvironment} {
+		if env == val {
+			return true
+		}
+	}
+	return false
+}
+
+// environmentStringToInt converts a string like "production" into the corresponding environment int.
+// Our environments are represented as an Enum.
+func environmentStringToInt(s string) (Environment, error) {
+	if s == "production" {
+		return ProductionEnvironment, nil
+	} else if s == "development" {
+		return DevelopmentEnvironment, nil
+	} else if s == "drone-test" {
+		return DroneTestEnvironment, nil
+	}
+	return -1, fmt.Errorf("invalid environment: %s", s)
 }
 
 // String() returns the key used for the secret identifier
@@ -55,23 +85,38 @@ func (id SecretIdentifier) String() string {
 	return fmt.Sprintf("%s.%s.%s", id.EnvironmentString(), id.Service, id.Key)
 }
 
+// stringToSecretIdentifier() returns the key used for the secret identifier
+func stringToSecretIdentifier(s string) (SecretIdentifier, error) {
+	parts := strings.SplitN(s, ".", 4)
+	if len(parts) != 3 {
+		return SecretIdentifier{}, fmt.Errorf("unable to create SecretIdentifier from string -- couldn't split: %s", s)
+	}
+	env, err := environmentStringToInt(parts[0])
+	if err != nil {
+		return SecretIdentifier{}, fmt.Errorf("unable to create SecretIdentifier from string -- invalid environment: %s", s)
+	}
+	return SecretIdentifier{env, parts[1], parts[2]}, nil
+}
+
 // SecretStore is the CRUD-like interface for Secrets
 type SecretStore interface {
 	// Creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
 	Create(id SecretIdentifier, value string) error
 
-	// Read a Secret from the store
+	// Read a Secret from the store. Returns the lastest version of the secret.
 	Read(id SecretIdentifier) (Secret, error)
 
-	// ReadVersion reads a specific version of a secret from the store
+	// ReadVersion reads a specific version of a secret from the store.
 	// Version is 0-indexed
-	// If version < 0, means “latest” version
 	ReadVersion(id SecretIdentifier, version int) (Secret, error)
 
 	// Updates a Secret from the store and increments version number.
 	Update(id SecretIdentifier, value string) (Secret, error)
 
-	// History gets history for a secret, returning all versions from the store
+	// List gets secrets within a namespace (env/service)>
+	List(env Environment, service string) ([]SecretIdentifier, error)
+
+	// History gets history for a secret, returning all versions from the store.
 	History(id SecretIdentifier) ([]SecretMeta, error)
 }
 
@@ -126,4 +171,17 @@ type AuthorizationError struct {
 
 func (e *AuthorizationError) Error() string {
 	return fmt.Sprintf("Unauthorized to access secret with identifier: %s", e.Identifier)
+}
+
+// ByIDString allows sorting SecretIdentifiers by Key
+type ByIDString []SecretIdentifier
+
+func (s ByIDString) Len() int {
+	return len(s)
+}
+func (s ByIDString) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+func (s ByIDString) Less(i, j int) bool {
+	return s[i].String() < s[j].String()
 }

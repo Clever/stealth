@@ -1,5 +1,10 @@
 package store
 
+import (
+	"fmt"
+	"sort"
+)
+
 // mHistory has all versions of a secret, and its revocation status
 type mHistory struct {
 	// Secrets contains all versions of a secret
@@ -71,6 +76,23 @@ func (s *MemoryStore) Update(id SecretIdentifier, value string) (Secret, error) 
 	s.history[id] = history
 
 	return Secret{Data: value}, nil
+}
+
+// List gets all secret identifiers within a namespace
+func (s *MemoryStore) List(env Environment, service string) ([]SecretIdentifier, error) {
+	// validate environment; avoids a panic looking up Unicreds path below
+	if !isValidEnvironmentInt(env) {
+		return []SecretIdentifier{}, fmt.Errorf("env %d is invalid", env)
+	}
+
+	results := []SecretIdentifier{}
+	for id := range s.history {
+		if id.Environment == env && id.Service == service {
+			results = append(results, id)
+		}
+	}
+	sort.Sort(ByIDString(results))
+	return results, nil
 }
 
 // History gets all historical versions of a secret

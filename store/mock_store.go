@@ -23,6 +23,11 @@ func (s *MockStore) Update(id SecretIdentifier, value string) (Secret, error) {
 	return Secret{}, nil
 }
 
+// List (no-op) mocks listing all secrets in a namespace
+func (s *MockStore) List(env Environment, service string) ([]SecretIdentifier, error) {
+	return []SecretIdentifier{}, nil
+}
+
 // History (no-op) mocks retrieving historical versions of a secret
 func (s *MockStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 	return []SecretMeta{}, nil
