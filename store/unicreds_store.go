@@ -121,8 +121,8 @@ func (s *UnicredsStore) List(env int, service string) ([]SecretIdentifier, error
 	}
 
 	// create a mockId, so we can get the unicreds store path
-	mockId := SecretIdentifier{env, service, "###"}
-	secrets, err := unicreds.ListSecrets(s.path(mockId), false)
+	mockID := SecretIdentifier{env, service, "###"}
+	secrets, err := unicreds.ListSecrets(s.path(mockID), false)
 	if err != nil {
 		return []SecretIdentifier{}, err
 	}
