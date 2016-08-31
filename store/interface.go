@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -50,9 +51,47 @@ func (id SecretIdentifier) EnvironmentString() string {
 	}
 }
 
+// isValidEnvironmentInt checks if an int is among our supported environments.
+// Our environments are represented as an enum
+func isValidEnvironmentInt(i int) bool {
+	for _, val := range []int{ProductionEnvironment, DevelopmentEnvironment, DroneTestEnvironment} {
+		if i == val {
+			return true
+		}
+	}
+	return false
+}
+
+// environmentStringToInt converts a string like "production" into the corresponding environment int.
+// Our environments are represented as an Enum.
+func environmentStringToInt(s string) (int, error) {
+	if s == "production" {
+		return ProductionEnvironment, nil
+	} else if s == "development" {
+		return DevelopmentEnvironment, nil
+	} else if s == "drone-test" {
+		return DroneTestEnvironment, nil
+	}
+	return -1, fmt.Errorf("invalid environment: %s", s)
+}
+
 // String() returns the key used for the secret identifier
 func (id SecretIdentifier) String() string {
 	return fmt.Sprintf("%s.%s.%s", id.EnvironmentString(), id.Service, id.Key)
+}
+
+// TODO: Add tests for back and forth, also check for invalid secret identifier string
+// stringToSecretIdentifier() returns the key used for the secret identifier
+func stringToSecretIdentifier(s string) (SecretIdentifier, error) {
+	parts := strings.SplitN(s, ".", 3)
+	if len(parts) != 3 {
+		return SecretIdentifier{}, fmt.Errorf("unable to create SecretIdentifier from string -- couldn't split: %s", s)
+	}
+	env, err := environmentStringToInt(parts[0])
+	if err != nil {
+		return SecretIdentifier{}, fmt.Errorf("unable to create SecretIdentifier from string -- invalid environment: %s", s)
+	}
+	return SecretIdentifier{env, parts[1], parts[2]}, nil
 }
 
 // SecretStore is the CRUD-like interface for Secrets
@@ -70,6 +109,9 @@ type SecretStore interface {
 
 	// Updates a Secret from the store and increments version number.
 	Update(id SecretIdentifier, value string) (Secret, error)
+
+	// List gets secrets within a namespace (env/service)
+	List(env int, service string) ([]SecretIdentifier, error)
 
 	// History gets history for a secret, returning all versions from the store
 	History(id SecretIdentifier) ([]SecretMeta, error)

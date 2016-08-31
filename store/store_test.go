@@ -11,7 +11,7 @@ import (
 
 // Other possible tests
 // - keys shouldn't be case sensitive
-// - should fail if key contains invalid chars / format
+// - should fail if key contains invalid chars / format (must be [a-z0-9-])
 
 func stores() map[string]SecretStore {
 	var stores = make(map[string]SecretStore)
@@ -45,6 +45,27 @@ func TestIdentifer(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("%s", id), "drone-test.service.foo")
 }
 
+func testStringToSecretIdentifier(t *testing.T) {
+	t.Log("works for all valid environments")
+	for _, env := range []int{DroneTestEnvironment, DevelopmentEnvironment, ProductionEnvironment} {
+		id := SecretIdentifier{Environment: env, Service: "service", Key: "foo"}
+		idFromString, err := stringToSecretIdentifier(id.String())
+		assert.NoError(t, err)
+		assert.Equal(t, idFromString, id)
+	}
+
+	// TODO: consider creating SecretIdentifier's in a NewSecretIdentifier constructor and put validation there
+	t.Log("errors on invalid environment")
+	id := SecretIdentifier{Environment: -1, Service: "service", Key: "foo"}
+	_, err := stringToSecretIdentifier(id.String())
+	assert.Error(t, err)
+
+	t.Log("errors on '.' in key name")
+	id = SecretIdentifier{Environment: DroneTestEnvironment, Service: "service", Key: "foo.bar"}
+	_, err = stringToSecretIdentifier(id.String())
+	assert.Error(t, err)
+}
+
 func TestCreateRead(t *testing.T) {
 	id := getRandomTestSecretIdentifier()
 	defer deleteUnicredsSecret(id)
@@ -69,6 +90,63 @@ func TestCreateRead(t *testing.T) {
 		err = store.Create(id, data)
 		assert.Error(t, err)
 		assert.Equal(t, err, &IdentifierAlreadyExistsError{Identifier: id})
+	}
+}
+
+func TestCreateList(t *testing.T) {
+	// service 1 has 2 identifiers
+	s1id1 := getRandomTestSecretIdentifier()
+	defer deleteUnicredsSecret(s1id1)
+	s1id2 := getRandomTestSecretIdentifier()
+	defer deleteUnicredsSecret(s1id2)
+
+	// service 2 has 1 identifier
+	s2id1 := getRandomTestSecretIdentifier()
+	s2id1.Service = "test2"
+	defer deleteUnicredsSecret(s2id1)
+
+	data := "foo"
+	for name, store := range stores() {
+		t.Logf("---- %s ----\n", name)
+
+		t.Log("errors if given invalid environment")
+		_, err := store.List(-1, "test")
+		assert.Error(t, err)
+
+		t.Log("no secrets exist, to begin")
+		ids, err := store.List(DroneTestEnvironment, "test")
+		assert.NoError(t, err)
+		assert.Equal(t, len(ids), 0)
+
+		t.Log("write 1st secret for service 1")
+		err = store.Create(s1id1, data)
+		assert.NoError(t, err)
+
+		t.Log("we should now be able to list 1 secret id")
+		ids, err = store.List(DroneTestEnvironment, "test")
+		assert.NoError(t, err)
+		assert.Equal(t, len(ids), 1)
+		assert.Equal(t, ids, []SecretIdentifier{s1id1})
+
+		t.Log("write 2nd secret for service 1")
+		err = store.Create(s1id2, data)
+		assert.NoError(t, err)
+
+		t.Log("write 1st secret for service 2")
+		err = store.Create(s2id1, data)
+		assert.NoError(t, err)
+
+		t.Log("we should now be able to list 2 secret ids for service 1")
+		ids, err = store.List(DroneTestEnvironment, "test")
+		assert.NoError(t, err)
+		assert.Equal(t, ids, []SecretIdentifier{s1id1, s1id2})
+
+		t.Log("we should now be able to list 1 secret id for service 2")
+		ids, err = store.List(DroneTestEnvironment, "test2")
+		assert.NoError(t, err)
+		assert.Equal(t, ids, []SecretIdentifier{s2id1})
+
+		// TODO: how should they be sorted?
 	}
 }
 

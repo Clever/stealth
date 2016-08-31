@@ -111,6 +111,33 @@ func (s *UnicredsStore) Update(id SecretIdentifier, value string) (Secret, error
 	return Secret{value, SecretMeta{Version: secret.Meta.Version + 1}}, nil
 }
 
+// List gets all secrets in a namespace
+func (s *UnicredsStore) List(env int, service string) ([]SecretIdentifier, error) {
+	// validate environment; avoids a panic looking up Unicreds path below
+	if !isValidEnvironmentInt(env) {
+		return []SecretIdentifier{}, fmt.Errorf("env %d is invalid", env)
+	}
+
+	// create a mockId, so we can get the unicreds store path
+	mockId := SecretIdentifier{env, service, "###"}
+	secrets, err := unicreds.ListSecrets(s.path(mockId), false)
+	if err != nil {
+		return []SecretIdentifier{}, err
+	}
+
+	results := []SecretIdentifier{}
+	for _, s := range secrets {
+		id, err := stringToSecretIdentifier(s.Name)
+		if err != nil {
+			return []SecretIdentifier{}, err
+		}
+		if id.Environment == env && id.Service == service {
+			results = append(results, id)
+		}
+	}
+	return results, nil
+}
+
 // History returns all versions of a secret
 func (s *UnicredsStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 	secrets, err := unicreds.ListSecrets(s.path(id), true)
