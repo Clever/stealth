@@ -100,21 +100,20 @@ type SecretStore interface {
 	// Creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
 	Create(id SecretIdentifier, value string) error
 
-	// Read a Secret from the store
+	// Read a Secret from the store. Returns the lastest version of the secret.
 	Read(id SecretIdentifier) (Secret, error)
 
-	// ReadVersion reads a specific version of a secret from the store
+	// ReadVersion reads a specific version of a secret from the store.
 	// Version is 0-indexed
-	// If version < 0, means “latest” version
 	ReadVersion(id SecretIdentifier, version int) (Secret, error)
 
 	// Updates a Secret from the store and increments version number.
 	Update(id SecretIdentifier, value string) (Secret, error)
 
-	// List gets secrets within a namespace (env/service)
+	// List gets secrets within a namespace (env/service)>
 	List(env int, service string) ([]SecretIdentifier, error)
 
-	// History gets history for a secret, returning all versions from the store
+	// History gets history for a secret, returning all versions from the store.
 	History(id SecretIdentifier) ([]SecretMeta, error)
 }
 
