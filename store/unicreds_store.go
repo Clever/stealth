@@ -9,7 +9,10 @@ import (
 	"github.com/Clever/unicreds"
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/json"
+	"gopkg.in/Clever/kayvee-go.v3/logger"
 )
+
+var lg = logger.New("stealth")
 
 // UnicredsStore is a secret store pointing at a prod and dev unicreds (https://github.com/Clever/unicreds) backend
 type UnicredsStore struct {
@@ -77,6 +80,7 @@ func (s *UnicredsStore) Create(id SecretIdentifier, value string) error {
 func (s *UnicredsStore) Read(id SecretIdentifier) (Secret, error) {
 	secret, err := unicreds.GetHighestVersionSecret(s.path(id), id.String(), getEncryptionContext(id))
 	if err != nil {
+		lg.ErrorD("unicreds-read-error", logger.M{"err": err.Error()})
 		return Secret{}, &IdentifierNotFoundError{Identifier: id}
 	}
 	version, err := strconv.Atoi(secret.Version)
@@ -103,6 +107,7 @@ func (s *UnicredsStore) ReadVersion(id SecretIdentifier, version int) (Secret, e
 func (s *UnicredsStore) Update(id SecretIdentifier, value string) (Secret, error) {
 	secret, err := s.Read(id)
 	if err != nil {
+		lg.ErrorD("unicreds-Read", logger.M{"error": err.Error()})
 		return Secret{}, err
 	}
 	nextVersion, err := unicreds.ResolveVersion(s.path(id), id.String(), 0)
@@ -124,6 +129,7 @@ func (s *UnicredsStore) List(env Environment, service string) ([]SecretIdentifie
 	mockID := SecretIdentifier{env, service, "###"}
 	secrets, err := unicreds.ListSecrets(s.path(mockID), false)
 	if err != nil {
+		lg.ErrorD("unicreds-ListSecrets", logger.M{"error": err.Error()})
 		return []SecretIdentifier{}, err
 	}
 
