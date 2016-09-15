@@ -33,15 +33,11 @@ func main() {
 	}
 }
 
+// findDupes finds all secrets that match a secret with a specified identifier, and optionally
+// replace that value with a new value
 func findDupes() {
 	s := store.NewUnicredsStore()
-	env := store.ProductionEnvironment
-	if *dupeEnvironment == "development" {
-		env = store.DevelopmentEnvironment
-	} else if *dupeEnvironment != "production" {
-		log.Fatal("Environment flag must be 'development' or 'production'")
-	}
-	id := store.SecretIdentifier{Environment: env, Service: *dupeService, Key: *dupeKey}
+	id := store.SecretIdentifier{Environment: getEnvironment(*dupeEnvironment), Service: *dupeService, Key: *dupeKey}
 	secret, err := s.Read(id)
 	if err != nil {
 		log.Fatal(err)
@@ -79,18 +75,24 @@ func findDupes() {
 	}
 }
 
+// deleteSecret removes all historical updates for a secret
 func deleteSecret() {
 	s := store.NewUnicredsStore()
-	env := store.ProductionEnvironment
-	if *deleteEnvironment == "development" {
-		env = store.DevelopmentEnvironment
-	} else if *deleteEnvironment != "production" {
-		log.Fatal("Environment flag must be 'development' or 'production'")
-	}
-	id := store.SecretIdentifier{Environment: env, Service: *deleteService, Key: *deleteKey}
-	if askForConfirmation("Are you sure you want to update the secret " + id.String() + "?") {
+	id := store.SecretIdentifier{Environment: getEnvironment(*deleteEnvironment), Service: *deleteService, Key: *deleteKey}
+	if askForConfirmation("Are you sure you want to delete the secret " + id.String() + "?") {
 		s.Delete(id)
 	}
+}
+
+// getEnvironment returns the Environment enum value based on the string, or fatally errors if the string
+// is not 'development' or 'production'
+func getEnvironment(environment string) store.Environment {
+	if environment == "development" {
+		return store.DevelopmentEnvironment
+	} else if environment != "production" {
+		log.Fatal("Environment flag must be 'development' or 'production'")
+	}
+	return store.ProductionEnvironment
 }
 
 // askForConfirmation asks the user for confirmation.
