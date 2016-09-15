@@ -116,13 +116,29 @@ func (s *UnicredsStore) Update(id SecretIdentifier, value string) (Secret, error
 
 // List gets all secrets in a namespace
 func (s *UnicredsStore) List(env Environment, service string) ([]SecretIdentifier, error) {
+	secrets, err := s.ListAll(env)
+	if err != nil {
+		return []SecretIdentifier{}, err
+	}
+	results := []SecretIdentifier{}
+	for _, id := range secrets {
+		if id.Service == service {
+			results = append(results, id)
+		}
+	}
+	return results, nil
+}
+
+// ListAll gets all secrets in an environment.
+// Note that this is a Unicreds-only function - not part of the SecretStore interface.
+func (s *UnicredsStore) ListAll(env Environment) ([]SecretIdentifier, error) {
 	// validate environment; avoids a panic looking up Unicreds path below
 	if !isValidEnvironmentInt(env) {
 		return []SecretIdentifier{}, fmt.Errorf("env %d is invalid", env)
 	}
 
 	// create a mockId, so we can get the unicreds store path
-	mockID := SecretIdentifier{env, service, "###"}
+	mockID := SecretIdentifier{env, "###", "###"}
 	secrets, err := unicreds.ListSecrets(s.path(mockID), false)
 	if err != nil {
 		return []SecretIdentifier{}, err
@@ -134,12 +150,16 @@ func (s *UnicredsStore) List(env Environment, service string) ([]SecretIdentifie
 		if err != nil {
 			return []SecretIdentifier{}, err
 		}
-		if id.Environment == env && id.Service == service {
-			results = append(results, id)
-		}
+		results = append(results, id)
 	}
 	sort.Sort(ByIDString(results))
 	return results, nil
+}
+
+// Delete deletes all versions of a secret from the secret store.
+// Note that this is a Unicreds-only function - not part of the SecretStore interface.
+func (s *UnicredsStore) Delete(id SecretIdentifier) error {
+	return unicreds.DeleteSecret(s.path(id), id.String())
 }
 
 // History returns all versions of a secret
@@ -168,7 +188,7 @@ func (s *UnicredsStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 }
 
 // NewUnicredsStore creates a secret store that points at DynamoDB and KMS AWS resources
-func NewUnicredsStore() SecretStore {
+func NewUnicredsStore() *UnicredsStore {
 	log.SetHandler(json.New(os.Stderr))
 	unicreds.SetAwsConfig(&Region, nil)
 	environments := make(map[Environment]UnicredsConfig)
