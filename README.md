@@ -20,6 +20,10 @@ You can replace all these values using this command:
 
     ./stealth dupes --environment [production OR development] --service [service-name] --key [key name] --replace-with [value to replace with]
 
+To delete a secret:
+
+    ./stealth delete --environment [production OR development] --service [service-name] --key [key name]
+
 # tests
 
 To run tests, use:
