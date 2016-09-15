@@ -156,6 +156,12 @@ func (s *UnicredsStore) ListAll(env Environment) ([]SecretIdentifier, error) {
 	return results, nil
 }
 
+// Delete deletes all versions of a secret from the secret store.
+// Note that this is a Unicreds-only function - not part of the SecretStore interface.
+func (s *UnicredsStore) Delete(id SecretIdentifier) error {
+	return unicreds.DeleteSecret(s.path(id), id.String())
+}
+
 // History returns all versions of a secret
 func (s *UnicredsStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 	secrets, err := unicreds.ListSecrets(s.path(id), true)

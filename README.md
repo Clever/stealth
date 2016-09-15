@@ -14,7 +14,11 @@ Stealth can be run standalone for certain administrative tasks. First you'll nee
 
 To find all secrets that have the same value as an existing secret (for instance, to revoke a leaked secret):
 
-    ./stealth find-dupes --environment [production OR development] --service [service-name] --key [key name]
+    ./stealth dupes --environment [production OR development] --service [service-name] --key [key name]
+
+You can replace all these values using this command:
+
+    ./stealth dupes --environment [production OR development] --service [service-name] --key [key name] --replace-with [value to replace with]
 
 # tests
 
