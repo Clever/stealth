@@ -80,6 +80,21 @@ func (s *MemoryStore) Update(id SecretIdentifier, value string) (Secret, error) 
 
 // List gets all secret identifiers within a namespace
 func (s *MemoryStore) List(env Environment, service string) ([]SecretIdentifier, error) {
+	ids, err := s.ListAll(env)
+	if err != nil {
+		return []SecretIdentifier{}, err
+	}
+	results := []SecretIdentifier{}
+	for _, id := range ids {
+		if id.Environment == env && id.Service == service {
+			results = append(results, id)
+		}
+	}
+	return results, nil
+}
+
+// ListAll gets all secret identifiers within an environment
+func (s *MemoryStore) ListAll(env Environment) ([]SecretIdentifier, error) {
 	// validate environment; avoids a panic looking up Unicreds path below
 	if !isValidEnvironmentInt(env) {
 		return []SecretIdentifier{}, fmt.Errorf("env %d is invalid", env)
@@ -87,9 +102,7 @@ func (s *MemoryStore) List(env Environment, service string) ([]SecretIdentifier,
 
 	results := []SecretIdentifier{}
 	for id := range s.history {
-		if id.Environment == env && id.Service == service {
-			results = append(results, id)
-		}
+		results = append(results, id)
 	}
 	sort.Sort(ByIDString(results))
 	return results, nil
@@ -105,6 +118,15 @@ func (s *MemoryStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 		return secrets, nil
 	}
 	return []SecretMeta{}, &IdentifierNotFoundError{Identifier: id}
+}
+
+// Delete deletes all versions of a secret
+func (s *MemoryStore) Delete(id SecretIdentifier) error {
+	if _, ok := s.history[id]; ok {
+		delete(s.history, id)
+		return nil
+	}
+	return &IdentifierNotFoundError{Identifier: id}
 }
 
 // NewMemoryStore creates an in-memory secret store

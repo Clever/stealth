@@ -116,8 +116,14 @@ type SecretStore interface {
 	// List gets secrets within a namespace (env/service)>
 	List(env Environment, service string) ([]SecretIdentifier, error)
 
+	// ListAll gets all secrets within a environment (env)>
+	ListAll(env Environment) ([]SecretIdentifier, error)
+
 	// History gets history for a secret, returning all versions from the store.
 	History(id SecretIdentifier) ([]SecretMeta, error)
+
+	// Delete deletes all versions of a secret
+	Delete(id SecretIdentifier) error
 }
 
 // IdentifierNotFoundError occurs when a secret identifier cannot be found (during Read, History, Update)
