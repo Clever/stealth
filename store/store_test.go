@@ -2,44 +2,14 @@ package store
 
 import (
 	"fmt"
-	"math/rand"
+	"github.com/stretchr/testify/assert"
 	"sort"
 	"testing"
-	"time"
-
-	"github.com/Clever/unicreds"
-	"github.com/stretchr/testify/assert"
 )
 
 // Other possible tests
 // - keys shouldn't be case sensitive
 // - should fail if key contains invalid chars / format (must be [a-z0-9-])
-
-func stores() map[string]SecretStore {
-	var stores = make(map[string]SecretStore)
-	stores["Memory"] = NewMemoryStore()
-	stores["Unicreds"] = NewUnicredsStore()
-	return stores
-}
-
-func getRandomTestSecretIdentifier() SecretIdentifier {
-	return SecretIdentifier{Environment: DroneTestEnvironment, Service: "test", Key: randSeq(10)}
-}
-
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-func randSeq(n int) string {
-	rand.Seed(time.Now().UTC().UnixNano())
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
-}
-
-func deleteUnicredsSecret(id SecretIdentifier) {
-	unicreds.DeleteSecret(DroneTest.UnicredsPath, id.String())
-}
 
 func TestIdentifer(t *testing.T) {
 	id := SecretIdentifier{Environment: DroneTestEnvironment, Service: "service", Key: "foo"}
@@ -70,9 +40,9 @@ func TestStringToSecretIdentifier(t *testing.T) {
 }
 
 func TestCreateRead(t *testing.T) {
-	id := getRandomTestSecretIdentifier()
-	defer deleteUnicredsSecret(id)
-	for name, store := range stores() {
+	id := GetRandomTestSecretIdentifier()
+	for name, store := range Stores() {
+		defer store.Delete(id)
 		t.Logf("---- %s ----\n", name)
 		t.Log("no secrets exist, to begin")
 		_, err := store.Read(id)
@@ -98,18 +68,17 @@ func TestCreateRead(t *testing.T) {
 
 func TestCreateList(t *testing.T) {
 	// service 1 has 2 identifiers
-	s1id1 := getRandomTestSecretIdentifier()
-	defer deleteUnicredsSecret(s1id1)
-	s1id2 := getRandomTestSecretIdentifier()
-	defer deleteUnicredsSecret(s1id2)
-
+	s1id1 := GetRandomTestSecretIdentifier()
+	s1id2 := GetRandomTestSecretIdentifier()
 	// service 2 has 1 identifier
-	s2id1 := getRandomTestSecretIdentifier()
+	s2id1 := GetRandomTestSecretIdentifier()
 	s2id1.Service = "test2"
-	defer deleteUnicredsSecret(s2id1)
 
 	data := "foo"
-	for name, store := range stores() {
+	for name, store := range Stores() {
+		defer store.Delete(s1id1)
+		defer store.Delete(s1id2)
+		defer store.Delete(s2id1)
 		t.Logf("---- %s ----\n", name)
 
 		t.Log("errors if given invalid environment")
@@ -150,13 +119,20 @@ func TestCreateList(t *testing.T) {
 		ids, err = store.List(DroneTestEnvironment, "test2")
 		assert.NoError(t, err)
 		assert.Equal(t, ids, []SecretIdentifier{s2id1})
+
+		t.Log("we should now be able to list all secrets ids for service 1 and 2")
+		ids, err = store.ListAll(DroneTestEnvironment)
+		assert.NoError(t, err)
+		expectedIds = []SecretIdentifier{s1id1, s1id2, s2id1}
+		sort.Sort(ByIDString(expectedIds))
+		assert.Equal(t, ids, expectedIds)
 	}
 }
 
 func TestUpdateHistory(t *testing.T) {
-	id := getRandomTestSecretIdentifier()
-	defer deleteUnicredsSecret(id)
-	for name, store := range stores() {
+	id := GetRandomTestSecretIdentifier()
+	for name, store := range Stores() {
+		defer store.Delete(id)
 		t.Logf("---- %s ----\n", name)
 		t.Log("no secrets exist, to begin")
 		_, err := store.Read(id)
@@ -220,5 +196,30 @@ func TestUpdateHistory(t *testing.T) {
 		readVersion, err = store.ReadVersion(id, -1)
 		assert.Error(t, err)
 		assert.Equal(t, err, &VersionNotFoundError{Identifier: id, Version: -1})
+	}
+}
+
+func TestDelete(t *testing.T) {
+	id := GetRandomTestSecretIdentifier()
+	for name, store := range Stores() {
+		defer store.Delete(id)
+		t.Logf("---- %s ----\n", name)
+		t.Log("creating secret")
+		data1 := "bar"
+		err := store.Create(id, data1)
+		assert.NoError(t, err)
+		t.Log("deleting secret")
+		err = store.Delete(id)
+		assert.NoError(t, err)
+
+		t.Log("we should not be able to read")
+		_, err = store.Read(id)
+		assert.Error(t, err)
+		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id})
+
+		t.Log("we should see no history")
+		_, err = store.History(id)
+		assert.Error(t, err)
+		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id})
 	}
 }

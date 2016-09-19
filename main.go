@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Clever/stealth/store"
+	"github.com/Clever/stealth/store/util"
 	"github.com/alecthomas/kingpin"
 	"log"
 	"os"
@@ -27,60 +28,36 @@ func main() {
 	command := kingpin.MustParse(app.Parse(os.Args[1:]))
 	switch command {
 	case cmdDupes.FullCommand():
-		findDupes()
-	case cmdDelete.FullCommand():
-		deleteSecret()
-	}
-}
+		s := store.NewUnicredsStore()
+		id := store.SecretIdentifier{Environment: getEnvironment(*dupeEnvironment), Service: *dupeService, Key: *dupeKey}
+		envs := []store.Environment{store.DevelopmentEnvironment, store.ProductionEnvironment}
 
-// findDupes finds all secrets that match a secret with a specified identifier, and optionally
-// replace that value with a new value
-func findDupes() {
-	s := store.NewUnicredsStore()
-	id := store.SecretIdentifier{Environment: getEnvironment(*dupeEnvironment), Service: *dupeService, Key: *dupeKey}
-	secret, err := s.Read(id)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	envs := [2]store.Environment{store.DevelopmentEnvironment, store.ProductionEnvironment}
-	if *updateWith == "" {
-		fmt.Println("Matching secret IDs")
-		fmt.Println("===================")
-	}
-	for _, e := range envs {
-		ids, err := s.ListAll(e)
+		dupes, err := util.FindDupes(s, id, envs)
 		if err != nil {
 			log.Fatal(err)
 		}
-		for _, id := range ids {
-			newSecret, err := s.Read(id)
-			if err != nil {
-				log.Fatal(err)
+		if *updateWith == "" {
+			fmt.Println("Matching secret IDs")
+			fmt.Println("===================")
+			for _, dupe := range dupes {
+				fmt.Println(dupe.String())
 			}
-			if newSecret.Data == secret.Data {
-				if *updateWith != "" {
-					if askForConfirmation("Are you sure you want to update the secret " + id.String() + "?") {
-						_, err := s.Update(id, *updateWith)
-						if err != nil {
-							log.Fatal(err)
-							return
-						}
+		} else {
+			for _, dupe := range dupes {
+				if askForConfirmation("Are you sure you want to update the secret " + dupe.String() + "?") {
+					_, err := s.Update(dupe, *updateWith)
+					if err != nil {
+						log.Fatal(err)
 					}
-				} else {
-					fmt.Println(id.EnvironmentString() + "." + id.Service + "." + id.Key)
 				}
 			}
 		}
-	}
-}
-
-// deleteSecret removes all historical updates for a secret
-func deleteSecret() {
-	s := store.NewUnicredsStore()
-	id := store.SecretIdentifier{Environment: getEnvironment(*deleteEnvironment), Service: *deleteService, Key: *deleteKey}
-	if askForConfirmation("Are you sure you want to delete the secret " + id.String() + "?") {
-		s.Delete(id)
+	case cmdDelete.FullCommand():
+		s := store.NewUnicredsStore()
+		id := store.SecretIdentifier{Environment: getEnvironment(*deleteEnvironment), Service: *deleteService, Key: *deleteKey}
+		if askForConfirmation("Are you sure you want to delete the secret " + id.String() + "?") {
+			s.Delete(id)
+		}
 	}
 }
 

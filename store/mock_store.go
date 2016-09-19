@@ -28,9 +28,19 @@ func (s *MockStore) List(env Environment, service string) ([]SecretIdentifier, e
 	return []SecretIdentifier{}, nil
 }
 
+// ListAll (no-op) mocks listing all secrets in an environment
+func (s *MockStore) ListAll(env Environment) ([]SecretIdentifier, error) {
+	return []SecretIdentifier{}, nil
+}
+
 // History (no-op) mocks retrieving historical versions of a secret
 func (s *MockStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 	return []SecretMeta{}, nil
+}
+
+// Delete (no-op) mocks deleting all versions of a secret
+func (s *MockStore) Delete(id SecretIdentifier) error {
+	return nil
 }
 
 // NewMockStore creates a mock secret store, with all no-op methods.
