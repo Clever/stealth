@@ -1,63 +1,71 @@
-hash: 0f1d91921d1828a0ecb74a7ceea53af9d7073e8222c2f08856727ef2b6832b12
-updated: 2016-08-24T12:00:59.876104748-07:00
+hash: be0be8f2d9e95f17a0c60601ff193a45da8cc1a28d6e8df57edd3de88106a581
+updated: 2016-09-19T20:34:35.411698773-07:00
 imports:
 - name: github.com/alecthomas/kingpin
   version: e5900212cbf65b181d3d8e08308ef06a01d117cf
 - name: github.com/alecthomas/template
   version: a0175ee3bccc567396460bf5acd36800cb10c49c
+  subpackages:
+  - parse
 - name: github.com/alecthomas/units
   version: 2efee857e7cfd4f3d0138cc3cbb1b4966962b93a
 - name: github.com/apex/log
   version: 8eba30e442954605fd2e1a542912d5b5e16cab13
+  subpackages:
+  - handlers/json
 - name: github.com/aws/aws-sdk-go
   version: 0c5b3da2c1c20d581b18b71b19e924cf433a19c9
+  subpackages:
+  - aws
+  - aws/awserr
+  - aws/credentials
+  - aws/session
+  - service/dynamodb
+  - service/dynamodb/dynamodbattribute
+  - service/dynamodb/dynamodbiface
+  - service/kms
+  - service/kms/kmsiface
+  - aws/client
+  - aws/corehandlers
+  - aws/credentials/stscreds
+  - aws/defaults
+  - aws/request
+  - private/endpoints
+  - aws/awsutil
+  - aws/client/metadata
+  - aws/signer/v4
+  - private/protocol/jsonrpc
+  - private/waiter
+  - private/protocol
+  - service/sts
+  - aws/credentials/ec2rolecreds
+  - aws/credentials/endpointcreds
+  - aws/ec2metadata
+  - private/protocol/rest
+  - private/protocol/json/jsonutil
+  - private/protocol/query
+  - private/protocol/query/queryutil
+  - private/protocol/xml/xmlutil
 - name: github.com/Clever/unicreds
   version: 8ddef5f30943fe4a9c59fa3cc1339e8cb8a54df2
-- name: github.com/davecgh/go-spew
-  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
-  subpackages:
-  - spew
 - name: github.com/go-ini/ini
   version: a2610b3a793cfa7fdf0b07038068af5ddc12aba1
-- name: github.com/go-logfmt/logfmt
-  version: d4327190ff838312623b09bfeb50d7c93c8d9c1d
-  repo: https://github.com/go-logfmt/logfmt
 - name: github.com/jmespath/go-jmespath
   version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
-- name: github.com/jpillora/backoff
-  version: a6f64285fd4072883335339357436b78d62c96a4
-  repo: https://github.com/jpillora/backoff
 - name: github.com/mattn/go-runewidth
   version: d6bea18f789704b5f83375793155289da36a3c7f
 - name: github.com/olekukonko/tablewriter
   version: daf2955e742cf123959884fdff4685aa79b63135
-- name: github.com/pmezard/go-difflib
-  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
-  subpackages:
-  - difflib
-- name: github.com/rogpeppe/fastuuid
-  version: 6724a57986aff9bff1a1770e9347036def7c89f6
-- name: github.com/smartystreets/go-aws-auth
-  version: 2043e6d0bb7e4c18464a7bba562acbe482e3cabd
-  repo: https://github.com/smartystreets/go-aws-auth
-- name: github.com/stretchr/objx
-  version: cbeaeb16a013161a98496fad62933b1d21786672
 - name: github.com/stretchr/testify
   version: d77da356e56a7428ad25149ca77381849a6a5232
   subpackages:
   - assert
-- name: github.com/tj/go-elastic
-  version: 9a9a2a21e071e6e38f236740c3b650e7316ae67e
-  repo: https://github.com/tj/go-elastic
-- name: github.com/tj/go-kinesis
-  version: 28ff32f8b54954f8ea365fa278bcfcec35ec094b
-  repo: https://github.com/tj/go-kinesis
-- name: golang.org/x/crypto
-  version: 351dc6a5bf92a5f2ae22fadeee08eb6a45aa2d93
-- name: golang.org/x/net
-  version: 7394c112eae4dba7e96bfcfe738e6373d61772b4
-- name: golang.org/x/text
-  version: d69c40b4be55797923cec7457fac7a244d91a9b6
-- name: golang.org/x/tools
-  version: 5cb1c80a83ef2a98bbc7b2fba1305239bb684fbe
-devImports: []
+testImports:
+- name: github.com/davecgh/go-spew
+  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+  subpackages:
+  - spew
+- name: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib
