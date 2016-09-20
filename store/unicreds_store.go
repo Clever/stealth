@@ -10,6 +10,7 @@ import (
 	"github.com/Clever/unicreds"
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/json"
+	"github.com/aws/aws-sdk-go/aws"
 )
 
 // UnicredsStore is a secret store pointing at a prod and dev unicreds (https://github.com/Clever/unicreds) backend
@@ -190,7 +191,8 @@ func (s *UnicredsStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 // NewUnicredsStore creates a secret store that points at DynamoDB and KMS AWS resources
 func NewUnicredsStore() *UnicredsStore {
 	log.SetHandler(json.New(os.Stderr))
-	unicreds.SetAwsConfig(&Region, nil)
+	unicreds.SetAwsConfig(aws.String(Region), nil)
+	unicreds.SetDynamoDBConfig(&aws.Config{Region: aws.String(Region), MaxRetries: aws.Int(5)})
 	environments := make(map[Environment]UnicredsConfig)
 	environments[ProductionEnvironment] = Production
 	environments[DevelopmentEnvironment] = Development
