@@ -4,3 +4,6 @@ import:
   subpackages:
   - assert
 - package: github.com/Clever/unicreds
+- package: github.com/aws/aws-sdk-go
+  subpackages:
+  - aws
