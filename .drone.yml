@@ -9,3 +9,5 @@ script:
 - make install_deps
 - make test
 - make build
+publish:
+  report_card: {}
