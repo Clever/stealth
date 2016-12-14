@@ -1,0 +1,22 @@
+machine:
+  services:
+  - docker
+  post:
+  - git clone git@github.com:clever/ci-scripts.git
+test:
+  override:
+  - export AWS_ACCESS_KEY_ID=$$aws_access_key_id
+  - export AWS_SECRET_ACCESS_KEY=$$aws_secret_access_key
+  - make install_deps
+  - make test
+  - make build
+  post: []
+deployment:
+  all:
+    owner: Clever
+    commands:
+    - ./ci-scripts/report-card $DOCKER_USER $DOCKER_PASS "$DOCKER_EMAIL"
+    branch: master
+checkout:
+  post: []
+general: {}
