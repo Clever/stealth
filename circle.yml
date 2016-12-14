@@ -3,7 +3,7 @@ machine:
   - docker
   post:
   - git clone git@github.com:clever/ci-scripts.git
-  - $HOME/ci-scripts/circleci/golang-install 1.7.4
+  - $HOME/ci-scripts/circleci/golang-install 1.6.4
 test:
   override:
   - make install_deps
