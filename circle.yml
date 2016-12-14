@@ -3,6 +3,7 @@ machine:
   - docker
   post:
   - git clone git@github.com:clever/ci-scripts.git
+  - $HOME/ci-scripts/circleci/golang-install 1.7.4
 test:
   override:
   - make install_deps
@@ -16,5 +17,7 @@ deployment:
     - ./ci-scripts/report-card $DOCKER_USER $DOCKER_PASS "$DOCKER_EMAIL"
     branch: master
 checkout:
-  post: []
-general: {}
+  post:
+  - $HOME/ci-scripts/circleci/golang-move-project
+general:
+  build_dir: ../.go_workspace/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
