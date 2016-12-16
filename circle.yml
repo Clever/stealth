@@ -1,0 +1,23 @@
+machine:
+  services:
+  - docker
+  post:
+  - git clone git@github.com:clever/ci-scripts.git
+  - $HOME/ci-scripts/circleci/golang-install 1.6.4
+test:
+  override:
+  - make install_deps
+  - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY make test
+  - make build
+  post: []
+deployment:
+  all:
+    owner: Clever
+    commands:
+    - ./ci-scripts/report-card $DOCKER_USER $DOCKER_PASS "$DOCKER_EMAIL"
+    branch: master
+checkout:
+  post:
+  - $HOME/ci-scripts/circleci/golang-move-project
+general:
+  build_dir: ../.go_workspace/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
