@@ -1,17 +1,18 @@
 package util
 
 import (
-	"github.com/Clever/stealth/store"
-	"github.com/stretchr/testify/assert"
 	"sort"
 	"testing"
+
+	"github.com/Clever/stealth/store"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFindDupes(t *testing.T) {
 	id1 := store.GetRandomTestSecretIdentifier()
 	id2 := store.GetRandomTestSecretIdentifier()
 	id3 := store.GetRandomTestSecretIdentifier()
-	envs := []store.Environment{store.DroneTestEnvironment}
+	envs := []store.Environment{store.CITestEnvironment}
 	for name, s := range store.Stores() {
 		defer s.Delete(id1)
 		defer s.Delete(id2)

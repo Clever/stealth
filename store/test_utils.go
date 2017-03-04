@@ -13,9 +13,9 @@ func Stores() map[string]SecretStore {
 	return stores
 }
 
-// GetRandomTestSecretIdentifier returns a random key in the drone-test environment
+// GetRandomTestSecretIdentifier returns a random key in the ci-test environment
 func GetRandomTestSecretIdentifier() SecretIdentifier {
-	return SecretIdentifier{Environment: DroneTestEnvironment, Service: "test", Key: randSeq(10)}
+	return SecretIdentifier{Environment: CITestEnvironment, Service: "test", Key: randSeq(10)}
 }
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")

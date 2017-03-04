@@ -33,8 +33,8 @@ const (
 	ProductionEnvironment Environment = iota
 	// DevelopmentEnvironment is an index for dev
 	DevelopmentEnvironment
-	// DroneTestEnvironment is an index for drone-test
-	DroneTestEnvironment
+	// CITestEnvironment is an index for ci-test
+	CITestEnvironment
 )
 
 // SecretIdentifier is a lookup key for a secret, including the production flag, the service name, and the specific key
@@ -49,8 +49,8 @@ func (id SecretIdentifier) EnvironmentString() string {
 		return "production"
 	} else if id.Environment == DevelopmentEnvironment {
 		return "development"
-	} else if id.Environment == DroneTestEnvironment {
-		return "drone-test"
+	} else if id.Environment == CITestEnvironment {
+		return "ci-test"
 	}
 	// Error
 	return ""
@@ -59,7 +59,7 @@ func (id SecretIdentifier) EnvironmentString() string {
 // isValidEnvironmentInt checks if an int is among our supported environments.
 // Our environments are represented as an enum
 func isValidEnvironmentInt(env Environment) bool {
-	for _, val := range []Environment{ProductionEnvironment, DevelopmentEnvironment, DroneTestEnvironment} {
+	for _, val := range []Environment{ProductionEnvironment, DevelopmentEnvironment, CITestEnvironment} {
 		if env == val {
 			return true
 		}
@@ -74,8 +74,8 @@ func environmentStringToInt(s string) (Environment, error) {
 		return ProductionEnvironment, nil
 	} else if s == "development" {
 		return DevelopmentEnvironment, nil
-	} else if s == "drone-test" {
-		return DroneTestEnvironment, nil
+	} else if s == "ci-test" {
+		return CITestEnvironment, nil
 	}
 	return -1, fmt.Errorf("invalid environment: %s", s)
 }

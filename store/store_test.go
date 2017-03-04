@@ -2,9 +2,10 @@ package store
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"sort"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // Other possible tests
@@ -12,14 +13,14 @@ import (
 // - should fail if key contains invalid chars / format (must be [a-z0-9-])
 
 func TestIdentifer(t *testing.T) {
-	id := SecretIdentifier{Environment: DroneTestEnvironment, Service: "service", Key: "foo"}
-	assert.Equal(t, id.String(), "drone-test.service.foo")
-	assert.Equal(t, fmt.Sprintf("%s", id), "drone-test.service.foo")
+	id := SecretIdentifier{Environment: CITestEnvironment, Service: "service", Key: "foo"}
+	assert.Equal(t, id.String(), "ci-test.service.foo")
+	assert.Equal(t, fmt.Sprintf("%s", id), "ci-test.service.foo")
 }
 
 func TestStringToSecretIdentifier(t *testing.T) {
 	t.Log("works for all valid environments")
-	for _, env := range []Environment{DroneTestEnvironment, DevelopmentEnvironment, ProductionEnvironment} {
+	for _, env := range []Environment{CITestEnvironment, DevelopmentEnvironment, ProductionEnvironment} {
 		id := SecretIdentifier{Environment: env, Service: "service", Key: "foo"}
 		idFromString, err := stringToSecretIdentifier(id.String())
 		assert.NoError(t, err)
@@ -32,7 +33,7 @@ func TestStringToSecretIdentifier(t *testing.T) {
 	_, err := stringToSecretIdentifier(id.String())
 	assert.Error(t, err)
 
-	id = SecretIdentifier{Environment: DroneTestEnvironment, Service: "service", Key: "foo.bar"}
+	id = SecretIdentifier{Environment: CITestEnvironment, Service: "service", Key: "foo.bar"}
 	idString := id.String()
 	t.Log(fmt.Sprintf("errors on '.' in key name: %s", idString))
 	_, err = stringToSecretIdentifier(idString)
@@ -86,7 +87,7 @@ func TestCreateList(t *testing.T) {
 		assert.Error(t, err)
 
 		t.Log("no secrets exist, to begin")
-		ids, err := store.List(DroneTestEnvironment, "test")
+		ids, err := store.List(CITestEnvironment, "test")
 		assert.NoError(t, err)
 		assert.Equal(t, len(ids), 0)
 
@@ -95,7 +96,7 @@ func TestCreateList(t *testing.T) {
 		assert.NoError(t, err)
 
 		t.Log("we should now be able to list 1 secret id")
-		ids, err = store.List(DroneTestEnvironment, "test")
+		ids, err = store.List(CITestEnvironment, "test")
 		assert.NoError(t, err)
 		assert.Equal(t, len(ids), 1)
 		assert.Equal(t, ids, []SecretIdentifier{s1id1})
@@ -109,19 +110,19 @@ func TestCreateList(t *testing.T) {
 		assert.NoError(t, err)
 
 		t.Log("we should now be able to list 2 secret ids for service 1")
-		ids, err = store.List(DroneTestEnvironment, "test")
+		ids, err = store.List(CITestEnvironment, "test")
 		assert.NoError(t, err)
 		expectedIds := []SecretIdentifier{s1id1, s1id2}
 		sort.Sort(ByIDString(expectedIds))
 		assert.Equal(t, ids, expectedIds)
 
 		t.Log("we should now be able to list 1 secret id for service 2")
-		ids, err = store.List(DroneTestEnvironment, "test2")
+		ids, err = store.List(CITestEnvironment, "test2")
 		assert.NoError(t, err)
 		assert.Equal(t, ids, []SecretIdentifier{s2id1})
 
 		t.Log("we should now be able to list all secrets ids for service 1 and 2")
-		ids, err = store.ListAll(DroneTestEnvironment)
+		ids, err = store.ListAll(CITestEnvironment)
 		assert.NoError(t, err)
 		expectedIds = []SecretIdentifier{s1id1, s1id2, s2id1}
 		sort.Sort(ByIDString(expectedIds))
