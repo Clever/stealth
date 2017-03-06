@@ -30,4 +30,4 @@ To run tests, use:
 
     make test
 
-This creates, updates, and reads secrets from the drone-test environment secret store, using the AWS credentials in your local environment.
+This creates, updates, and reads secrets from the ci-test environment secret store, using the AWS credentials in your local environment.

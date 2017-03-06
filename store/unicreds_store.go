@@ -27,9 +27,9 @@ type UnicredsConfig struct {
 	UnicredsAlias string
 }
 
-const prodKey, devKey, droneTestKey = "alias/stealth-key", "alias/stealth-key-dev", "alias/stealth-key-drone-test"
+const prodKey, devKey, ciTestKey = "alias/stealth-key", "alias/stealth-key-dev", "alias/stealth-key-drone-test"
 
-var prodPath, devPath, droneTestPath = "stealth", "stealth-dev", "stealth-drone-test"
+var prodPath, devPath, ciTestPath = "stealth", "stealth-dev", "stealth-drone-test"
 
 // Production is the production unicreds config
 var Production = UnicredsConfig{UnicredsPath: &prodPath, UnicredsAlias: prodKey}
@@ -37,8 +37,8 @@ var Production = UnicredsConfig{UnicredsPath: &prodPath, UnicredsAlias: prodKey}
 // Development is the dev unicreds config
 var Development = UnicredsConfig{UnicredsPath: &devPath, UnicredsAlias: devKey}
 
-// DroneTest is the drone-test unicreds config
-var DroneTest = UnicredsConfig{UnicredsPath: &droneTestPath, UnicredsAlias: droneTestKey}
+// CITest is the ci-test unicreds config
+var CITest = UnicredsConfig{UnicredsPath: &ciTestPath, UnicredsAlias: ciTestKey}
 
 // MalformedVersionError occurs when a secret version is malformed
 type MalformedVersionError struct {
@@ -196,6 +196,6 @@ func NewUnicredsStore() *UnicredsStore {
 	environments := make(map[Environment]UnicredsConfig)
 	environments[ProductionEnvironment] = Production
 	environments[DevelopmentEnvironment] = Development
-	environments[DroneTestEnvironment] = DroneTest
+	environments[CITestEnvironment] = CITest
 	return &UnicredsStore{Environments: environments}
 }
