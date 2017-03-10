@@ -27,9 +27,9 @@ type UnicredsConfig struct {
 	UnicredsAlias string
 }
 
-const prodKey, devKey, ciTestKey = "alias/stealth-key", "alias/stealth-key-dev", "alias/stealth-key-drone-test"
+const prodKey, devKey, ciTestKey = "alias/stealth-key", "alias/stealth-key-dev", "alias/stealth-key-ci-test"
 
-var prodPath, devPath, ciTestPath = "stealth", "stealth-dev", "stealth-drone-test"
+var prodPath, devPath, ciTestPath = "stealth", "stealth-dev", "stealth-ci-test"
 
 // Production is the production unicreds config
 var Production = UnicredsConfig{UnicredsPath: &prodPath, UnicredsAlias: prodKey}
