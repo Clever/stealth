@@ -13,13 +13,21 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 )
 
+// Region is default region for unicreds config
+var Region string
+
+func init() {
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = "us-west-1"
+	}
+	Region = region
+}
+
 // UnicredsStore is a secret store pointing at a prod and dev unicreds (https://github.com/Clever/unicreds) backend
 type UnicredsStore struct {
 	Environments map[Environment]UnicredsConfig
 }
-
-// Region is default region for unicreds config
-var Region = "us-west-1"
 
 // UnicredsConfig stores the configuration for a unicreds KMS and DynamoDB
 type UnicredsConfig struct {
