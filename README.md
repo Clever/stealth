@@ -23,6 +23,10 @@ To delete a secret:
 
     ./stealth delete --environment [production OR development] --service [service-name] --key [key name]
 
+To write a secret:
+
+    ./stealth write --environment [production OR development] -- service [service-name] --key [key name] --value [key value]
+
 # tests
 
 To run tests, use:
@@ -38,4 +42,3 @@ This creates, updates, and reads secrets from the ci-test environment secret sto
 # usage at Clever
 
 Stealth is co-owned by #eng-infra and #eng-security. For more info, see http://go/stealth
-

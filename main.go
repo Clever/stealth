@@ -3,25 +3,34 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/Clever/stealth/store"
-	"github.com/Clever/stealth/store/util"
-	"github.com/alecthomas/kingpin"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/Clever/stealth/store"
+	"github.com/Clever/stealth/store/util"
+	"github.com/alecthomas/kingpin"
 )
 
 var (
-	app               = kingpin.New("stealth", "The interface to Clever's secret store.")
-	cmdDupes          = app.Command("dupes", "Finds duplicate values of a secret.")
-	dupeEnvironment   = cmdDupes.Flag("environment", "Environment that the secret belongs to.").Required().String()
-	dupeService       = cmdDupes.Flag("service", "Service that key belongs to.").Required().String()
-	dupeKey           = cmdDupes.Flag("key", "Key to find duplicate values of.").Required().String()
-	updateWith        = cmdDupes.Flag("update-with", "Value to update the duplicate values with.").Default("").String()
+	app = kingpin.New("stealth", "The interface to Clever's secret store.")
+
+	cmdDupes        = app.Command("dupes", "Finds duplicate values of a secret.")
+	dupeEnvironment = cmdDupes.Flag("environment", "Environment that the secret belongs to.").Required().String()
+	dupeService     = cmdDupes.Flag("service", "Service that key belongs to.").Required().String()
+	dupeKey         = cmdDupes.Flag("key", "Key to find duplicate values of.").Required().String()
+	updateWith      = cmdDupes.Flag("update-with", "Value to update the duplicate values with.").Default("").String()
+
 	cmdDelete         = app.Command("delete", "Deletes all versions of a secret.")
 	deleteEnvironment = cmdDelete.Flag("environment", "Environment that the secret belongs to.").Required().String()
 	deleteService     = cmdDelete.Flag("service", "Service that key belongs to.").Required().String()
 	deleteKey         = cmdDelete.Flag("key", "Key to find duplicate values of.").Required().String()
+
+	cmdWrite         = app.Command("write", "Write a new version of a secret.")
+	writeEnvironment = cmdWrite.Flag("environment", "Environment that the secret belongs to.").Required().String()
+	writeService     = cmdWrite.Flag("service", "Service that the key belongs to.").Required().String()
+	writeKey         = cmdWrite.Flag("key", "Key to write.").Required().String()
+	writeValue       = cmdWrite.Flag("value", "Value to write.").Required().String()
 )
 
 func main() {
@@ -58,7 +67,17 @@ func main() {
 		if askForConfirmation("Are you sure you want to delete the secret " + id.String() + "?") {
 			s.Delete(id)
 		}
+
+	case cmdWrite.FullCommand():
+		s := store.NewUnicredsStore()
+		id := store.SecretIdentifier{Environment: getEnvironment(*writeEnvironment), Service: *writeService, Key: *writeKey}
+		// TODO: allow value to be a pointer to a file, or stdin
+		if err := createOrUpdate(s, id, *writeValue); err != nil {
+			log.Fatalf("Failed to write secret: %s", err)
+		}
+		fmt.Printf("Wrote secret %s\n", id.String())
 	}
+
 }
 
 // getEnvironment returns the Environment enum value based on the string, or fatally errors if the string
@@ -92,4 +111,16 @@ func askForConfirmation(s string) bool {
 			return false
 		}
 	}
+}
+
+func createOrUpdate(s store.SecretStore, id store.SecretIdentifier, value string) error {
+	err := s.Create(id, value)
+	if err != nil {
+		if _, ok := err.(*store.IdentifierAlreadyExistsError); !ok {
+			return err
+		}
+	}
+
+	_, err = s.Update(id, value)
+	return err
 }
