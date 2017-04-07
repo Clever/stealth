@@ -31,6 +31,20 @@ To run tests, use:
 
 This creates, updates, and reads secrets from the ci-test environment secret store, using the AWS credentials in your local environment.
 
+# Setting up backend infrastructure
+
+If you are using terraform, you can use the module [tf-credstash](https://github.com/dfuentes/tf-credstash) to set up the necessary dynamodb and kms key for stealth.  For xample, to create a dev backend, you can use this terraform code:
+
+```HCL
+provider "aws" {}
+
+module "stealth-dev" {
+  source = "github.com/dfuentes/tf-credstash"
+  key_alias = "alias/stealth-key-dev"
+  table_name = "stealth-dev"
+}
+```
+
 # license
 
 [Apache 2.0](./LICENSE)
