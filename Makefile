@@ -8,7 +8,7 @@ include golang.mk
 SHELL := /bin/bash
 PKGS = $(shell GO15VENDOREXPERIMENT=1 go list ./... | grep -v "vendor/" | grep -v "db")
 BINARY_NAME := "stealth"
-$(eval $(call golang-version-check,1.7))
+$(eval $(call golang-version-check,1.8))
 
 $(GOPATH)/bin/glide:
 	@go get github.com/Masterminds/glide
