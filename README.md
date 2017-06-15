@@ -17,7 +17,7 @@ To find all secrets that have the same value as an existing secret (for instance
 
 You can replace all these values using this command:
 
-    ./stealth dupes --environment [production OR development] --service [service-name] --key [key name] --replace-with [value to replace with]
+    ./stealth dupes --environment [production OR development] --service [service-name] --key [key name] --update-with [value to replace with]
 
 To delete a secret:
 
