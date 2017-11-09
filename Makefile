@@ -8,10 +8,8 @@ include golang.mk
 SHELL := /bin/bash
 PKGS = $(shell GO15VENDOREXPERIMENT=1 go list ./... | grep -v "vendor/" | grep -v "db")
 BINARY_NAME := "stealth"
-$(eval $(call golang-version-check,1.8))
+$(eval $(call golang-version-check,1.9))
 
-$(GOPATH)/bin/glide:
-	@go get github.com/Masterminds/glide
 
 all: build test
 
@@ -19,11 +17,13 @@ test: $(PKGS)
 $(PKGS): golang-test-all-deps
 	$(call golang-test-all,$@)
 
-install_deps: $(GOPATH)/bin/glide
-	@$(GOPATH)/bin/glide install
 
 build:
 	go build
 
 run: build
 	./stealth
+
+
+install_deps: golang-dep-vendor-deps
+	$(call golang-dep-vendor)
