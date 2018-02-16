@@ -3,12 +3,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/Clever/stealth"
-  packages = ["store","store/util"]
-  revision = "267d4f5ed0c6d63282b82353b4faed2ea15d67ea"
-
-[[projects]]
-  branch = "master"
   name = "github.com/Clever/unicreds"
   packages = ["."]
   revision = "8ddef5f30943fe4a9c59fa3cc1339e8cb8a54df2"
@@ -82,6 +76,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8a8df54fc5e021d5040fe0ab2e044374d478251b677b93d8ec2cc5e3bd919b17"
+  inputs-digest = "9a429e7d0a63ba92fdd0da10fb694c76ebc2266d553d4286cceec2c2c109b489"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -22,10 +22,6 @@
 
 
 [[constraint]]
-  branch = "master"
-  name = "github.com/Clever/stealth"
-
-[[constraint]]
   name = "github.com/Clever/unicreds"
 
 [[constraint]]
