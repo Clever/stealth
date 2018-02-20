@@ -16,7 +16,10 @@
 [[projects]]
   branch = "master"
   name = "github.com/alecthomas/template"
-  packages = [".","parse"]
+  packages = [
+    ".",
+    "parse"
+  ]
   revision = "a0175ee3bccc567396460bf5acd36800cb10c49c"
 
 [[projects]]
@@ -27,13 +30,49 @@
 
 [[projects]]
   name = "github.com/apex/log"
-  packages = [".","handlers/json"]
+  packages = [
+    ".",
+    "handlers/json"
+  ]
   revision = "8eba30e442954605fd2e1a542912d5b5e16cab13"
 
 [[projects]]
   name = "github.com/aws/aws-sdk-go"
-  packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/request","aws/session","aws/signer/v4","private/endpoints","private/protocol","private/protocol/json/jsonutil","private/protocol/jsonrpc","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","private/waiter","service/dynamodb","service/dynamodb/dynamodbattribute","service/dynamodb/dynamodbiface","service/kms","service/kms/kmsiface","service/sts"]
-  revision = "0c5b3da2c1c20d581b18b71b19e924cf433a19c9"
+  packages = [
+    "aws",
+    "aws/awserr",
+    "aws/awsutil",
+    "aws/client",
+    "aws/client/metadata",
+    "aws/corehandlers",
+    "aws/credentials",
+    "aws/credentials/ec2rolecreds",
+    "aws/credentials/endpointcreds",
+    "aws/credentials/stscreds",
+    "aws/defaults",
+    "aws/ec2metadata",
+    "aws/endpoints",
+    "aws/request",
+    "aws/session",
+    "aws/signer/v4",
+    "internal/sdkrand",
+    "internal/shareddefaults",
+    "private/protocol",
+    "private/protocol/json/jsonutil",
+    "private/protocol/jsonrpc",
+    "private/protocol/query",
+    "private/protocol/query/queryutil",
+    "private/protocol/rest",
+    "private/protocol/xml/xmlutil",
+    "service/dynamodb",
+    "service/dynamodb/dynamodbattribute",
+    "service/dynamodb/dynamodbiface",
+    "service/kms",
+    "service/kms/kmsiface",
+    "service/sts"
+  ]
+  revision = "63324a33d7e42a386c04d4daec764a3de243492e"
+  version = "v1.13.0"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -43,14 +82,13 @@
 [[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
-  revision = "a2610b3a793cfa7fdf0b07038068af5ddc12aba1"
-  version = "v1.21.0"
+  revision = "32e4c1e6bc4e7d0d8451aa6b75200d19e37a536a"
+  version = "v1.32.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
-  revision = "bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d"
+  revision = "0b12d6b5"
 
 [[projects]]
   name = "github.com/mattn/go-runewidth"
@@ -76,6 +114,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9a429e7d0a63ba92fdd0da10fb694c76ebc2266d553d4286cceec2c2c109b489"
+  inputs-digest = "b4d5c2f1ba64b4ba400ceda36b30d974e11c066dd5a7692919d2f2a8ae95981c"
   solver-name = "gps-cdcl"
   solver-version = 1
