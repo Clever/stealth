@@ -8,7 +8,7 @@ include golang.mk
 SHELL := /bin/bash
 PKGS = $(shell GO15VENDOREXPERIMENT=1 go list ./... | grep -v "vendor/" | grep -v "db")
 BINARY_NAME := "stealth"
-$(eval $(call golang-version-check,1.10))
+$(eval $(call golang-version-check,1.12))
 
 
 all: build test
