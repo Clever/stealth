@@ -79,15 +79,23 @@ func (s *UnicredsStore) Create(id SecretIdentifier, value string) error {
 	if err == nil {
 		return &IdentifierAlreadyExistsError{Identifier: id}
 	}
-	err = unicreds.PutSecret(s.path(id), s.alias(id), id.String(), value, unicreds.PaddedInt(0), getEncryptionContext(id))
-	return err
+	switch err.(type) {
+	case *IdentifierNotFoundError:
+		return unicreds.PutSecret(s.path(id), s.alias(id), id.String(), value, unicreds.PaddedInt(0), getEncryptionContext(id))
+	default:
+		return err
+	}
+
 }
 
 // Read reads the latest version of the secret
 func (s *UnicredsStore) Read(id SecretIdentifier) (Secret, error) {
 	secret, err := unicreds.GetHighestVersionSecret(s.path(id), id.String(), getEncryptionContext(id))
 	if err != nil {
-		return Secret{}, &IdentifierNotFoundError{Identifier: id}
+		if err.Error() == unicreds.ErrSecretNotFound.Error() {
+			return Secret{}, &IdentifierNotFoundError{Identifier: id}
+		}
+		return Secret{}, err
 	}
 	version, err := strconv.Atoi(secret.Version)
 	if err != nil {
@@ -102,7 +110,10 @@ func (s *UnicredsStore) ReadVersion(id SecretIdentifier, version int) (Secret, e
 	if err != nil {
 		_, err = s.Read(id)
 		if err != nil {
-			return Secret{}, &IdentifierNotFoundError{Identifier: id}
+			if err.Error() == unicreds.ErrSecretNotFound.Error() {
+				return Secret{}, &IdentifierNotFoundError{Identifier: id}
+			}
+			return Secret{}, err
 		}
 		return Secret{}, &VersionNotFoundError{Identifier: id, Version: version}
 	}
@@ -113,6 +124,9 @@ func (s *UnicredsStore) ReadVersion(id SecretIdentifier, version int) (Secret, e
 func (s *UnicredsStore) Update(id SecretIdentifier, value string) (Secret, error) {
 	secret, err := s.Read(id)
 	if err != nil {
+		if err.Error() == unicreds.ErrSecretNotFound.Error() {
+			return Secret{}, &IdentifierNotFoundError{Identifier: id}
+		}
 		return Secret{}, err
 	}
 	nextVersion, err := unicreds.ResolveVersion(s.path(id), id.String(), 0)
