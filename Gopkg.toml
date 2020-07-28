@@ -1,6 +1,7 @@
 
 [[constraint]]
   name = "github.com/Clever/unicreds"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/alecthomas/kingpin"
