@@ -80,6 +80,7 @@
     "service/dynamodb/dynamodbiface",
     "service/kms",
     "service/kms/kmsiface",
+    "service/ssm",
     "service/sts",
     "service/sts/stsiface"
   ]
@@ -136,6 +137,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b772e0209f1147736921f2805fda02dd6ad4b15fa24bfcaa3939589ec972c0d3"
+  inputs-digest = "90e2b5b1e4b65f1ba687acd5c129d77506b4ca21995f4e6b952a1632c39f6dfb"
   solver-name = "gps-cdcl"
   solver-version = 1

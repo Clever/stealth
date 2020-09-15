@@ -6,8 +6,10 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/pkg/errors"
 )
 
 func init() {
@@ -56,11 +58,17 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 	}
 	var failedRegions []string
 	var succeededRegions []string
+	exists := false
 	for region, regionClient := range s.ssmClients {
 		_, err := regionClient.PutParameter(putParameterInput)
 		// If any region fails, this operation fails.
 		// This guarantee the invariant that the all secret values are consistent across regions.
 		if err != nil {
+			if awsErr, ok := errors.Cause(err).(awserr.Error); ok {
+				if awsErr.Code() == ssm.ErrCodeParameterAlreadyExists {
+					exists = true
+				}
+			}
 			failedRegions = append(failedRegions, region)
 		} else {
 			succeededRegions = append(succeededRegions, region)
@@ -74,8 +82,11 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 			}
 			_, err := regionClient.DeleteParameter(deleteParameterInput)
 			if err != nil {
-				return fmt.Errorf("rror creating secret for (%s). try again. Error: %s", region, err)
+				return fmt.Errorf("Error creating secret for (%s). try again. Error: %s", region, err)
 			}
+		}
+		if exists {
+			return &IdentifierAlreadyExistsError{Identifier: id}
 		}
 		return fmt.Errorf("error creating secret for (%s). try again", strings.Join(failedRegions, ", "))
 	}
@@ -92,6 +103,11 @@ func (s *ParameterStore) Read(id SecretIdentifier) (Secret, error) {
 	apiClient := s.ssmClients[Region]
 	resp, err := apiClient.GetParameter(getParameterInput)
 	if err != nil {
+		if awsErr, ok := errors.Cause(err).(awserr.Error); ok {
+			if awsErr.Code() == ssm.ErrCodeParameterNotFound {
+				return Secret{}, &IdentifierNotFoundError{Identifier: id}
+			}
+		}
 		return Secret{}, fmt.Errorf("ParamStore error: %s. ", err)
 	}
 	return Secret{*resp.Parameter.Value, SecretMeta{Version: int(*resp.Parameter.Version)}}, nil
