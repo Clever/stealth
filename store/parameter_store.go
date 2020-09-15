@@ -1,8 +1,8 @@
 package store
 
 import (
-	"os"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -30,24 +30,21 @@ func getAPIClients() map[string]*ssm.SSM {
 // getParamNameFromName converts from development.oauth.foo-bar to development/oauth/FOO_BAR
 // because we want namespaces for parameter naming.
 func getParamNameFromName(id SecretIdentifier) string {
-	var paramName string
-	paramName = strings.ReplaceAll(strings.ToUpper(id.Key), "-", "_")
-	return fmt.Sprintf("/%s/%s/%s", id.EnvironmentString(), id.Service, id.Key)
+	paramName := strings.ReplaceAll(strings.ToUpper(id.Key), "-", "_")
+	return fmt.Sprintf("/%s/%s/%s", id.EnvironmentString(), id.Service, paramName)
 }
 
 // getParamNameFromNameAtVersion constructs AWS SSM paramname with version
 func getParamNameFromNameAtVersion(id SecretIdentifier, version int) string {
 	paramName := getParamNameFromName(id)
 	// parameterStore is 1-indexed, hence we bump the version number from the SecretStore
-	return fmt.Sprintf("%s:%d", paramName, version + 1)
+	return fmt.Sprintf("%s:%d", paramName, version+1)
 }
-
 
 // ParameterStore is a secret store that uses AWS SSM Parameter store
 type ParameterStore struct {
 	ssmClients map[string]*ssm.SSM
 }
-
 
 // Creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
 func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
@@ -60,25 +57,25 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 	var failedRegions []string
 	var succeededRegions []string
 	for region, regionClient := range s.ssmClients {
-		resp, err := regionClient.PutParameter(putParameterInput)
-		// If any region fails, this operation fails. 
+		_, err := regionClient.PutParameter(putParameterInput)
+		// If any region fails, this operation fails.
 		// This guarantee the invariant that the all secret values are consistent across regions.
 		if err != nil {
 			failedRegions = append(failedRegions, region)
 		} else {
 			succeededRegions = append(succeededRegions, region)
-		} 
+		}
 	}
 	if len(failedRegions) > 0 {
 		for _, region := range succeededRegions {
 			regionClient := s.ssmClients[region]
 			deleteParameterInput := &ssm.DeleteParameterInput{
-				Name:      aws.String(getParamNameFromName(id)),
+				Name: aws.String(getParamNameFromName(id)),
 			}
-			resp, err := regionClient.DeleteParameter(deleteParameterInput)
+			_, err := regionClient.DeleteParameter(deleteParameterInput)
 			if err != nil {
 				return fmt.Errorf("rror creating secret for (%s). try again. Error: %s", region, err)
-			} 
+			}
 		}
 		return fmt.Errorf("error creating secret for (%s). try again", strings.Join(failedRegions, ", "))
 	}
@@ -97,7 +94,7 @@ func (s *ParameterStore) Read(id SecretIdentifier) (Secret, error) {
 	if err != nil {
 		return Secret{}, fmt.Errorf("ParamStore error: %s. ", err)
 	}
-	return Secret{*resp.Parameter.Value, SecretMeta{Version: int(*resp.Parameter.Version) }},  nil
+	return Secret{*resp.Parameter.Value, SecretMeta{Version: int(*resp.Parameter.Version)}}, nil
 }
 
 // ReadVersion reads a specific version of a secret from the store.
@@ -113,7 +110,7 @@ func (s *ParameterStore) ReadVersion(id SecretIdentifier, version int) (Secret, 
 	if err != nil {
 		return Secret{}, fmt.Errorf("ParamStore error: %s. ", err)
 	}
-	return Secret{*resp.Parameter.Value, SecretMeta{Version: int(*resp.Parameter.Version) }},  nil
+	return Secret{*resp.Parameter.Value, SecretMeta{Version: int(*resp.Parameter.Version)}}, nil
 }
 
 // Updates a Secret from the store and increments version number.

@@ -213,7 +213,7 @@ func (s *UnicredsStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 // NewUnicredsStore creates a secret store that points at DynamoDB and KMS AWS resources
 func NewUnicredsStore() *UnicredsStore {
 	log.SetHandler(json.New(os.Stderr))
-	unicreds.SetAwsConfig(aws.String(Region), nil, nil)
+	unicreds.SetAwsConfig(aws.String(Region), nil)
 	unicreds.SetDynamoDBConfig(&aws.Config{Region: aws.String(Region), MaxRetries: aws.Int(5)})
 	environments := make(map[Environment]UnicredsConfig)
 	environments[ProductionEnvironment] = Production
