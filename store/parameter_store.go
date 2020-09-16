@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -23,9 +24,9 @@ func init() {
 func getAPIClients() map[string]*ssm.SSM {
 	return map[string]*ssm.SSM{
 		"us-west-1": ssm.New(session.New(&aws.Config{Region: aws.String("us-west-1")})),
-		// "us-west-2": ssm.New(session.New(&aws.Config{Region: aws.String("us-west-2")})),
-		// "us-east-1": ssm.New(session.New(&aws.Config{Region: aws.String("us-east-1")})),
-		// "us-east-2": ssm.New(session.New(&aws.Config{Region: aws.String("us-east-2")})),
+		"us-west-2": ssm.New(session.New(&aws.Config{Region: aws.String("us-west-2")})),
+		"us-east-1": ssm.New(session.New(&aws.Config{Region: aws.String("us-east-1")})),
+		"us-east-2": ssm.New(session.New(&aws.Config{Region: aws.String("us-east-2")})),
 	}
 }
 
@@ -65,7 +66,7 @@ type ParameterStore struct {
 	ssmClients map[string]*ssm.SSM
 }
 
-// Creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
+// Create creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
 func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 	name := getParamNameFromName(id)
 	putParameterInput := &ssm.PutParameterInput{
@@ -159,7 +160,7 @@ func (s *ParameterStore) ReadVersion(id SecretIdentifier, version int) (Secret, 
 	return Secret{*resp.Parameter.Value, SecretMeta{Version: int(*resp.Parameter.Version)}}, nil
 }
 
-// Updates a Secret from the store and increments version number.
+// Update updates a Secret from the store and increments version number.
 func (s *ParameterStore) Update(id SecretIdentifier, value string) (Secret, error) {
 	name := getParamNameFromName(id)
 	putParameterInput := &ssm.PutParameterInput{
@@ -220,16 +221,33 @@ func (s *ParameterStore) List(env Environment, service string) ([]SecretIdentifi
 		},
 	}
 	results := []SecretIdentifier{}
-	resp, err := apiClient.DescribeParameters(describeParametersByPathInput)
-	if err != nil {
-		return results, err
-	}
-	for _, result := range resp.Parameters {
-		ident, err := getSecretIDFromParamName(*result.Name)
+	// We retry 3 times and return the maximum of the results
+	// Per https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_DescribeParameters.html
+	// DescribeParameters RRequest results are returned on a best-effort basis.
+	// If you specify MaxResults in the request, the response includes information up to the limit specified.
+	// The number of items returned, however, can be between zero and the value of MaxResults.
+	retryCount := 3
+	for i := 1; i <= retryCount; i++ {
+		resultsPerTry := []SecretIdentifier{}
+		resp, err := apiClient.DescribeParameters(describeParametersByPathInput)
 		if err != nil {
-			return results, err
+			if i < retryCount {
+				continue
+			} else {
+				return resultsPerTry, err
+			}
 		}
-		results = append(results, ident)
+		for _, result := range resp.Parameters {
+			ident, err := getSecretIDFromParamName(*result.Name)
+			if err != nil {
+				return resultsPerTry, err
+			}
+			resultsPerTry = append(resultsPerTry, ident)
+		}
+		if len(resultsPerTry) >= len(results) {
+			results = resultsPerTry
+		}
+		time.Sleep(1 * time.Second)
 	}
 	return results, nil
 }

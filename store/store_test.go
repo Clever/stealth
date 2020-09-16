@@ -96,10 +96,6 @@ func TestCreateList(t *testing.T) {
 		err = store.Create(s1id1, data)
 		assert.NoError(t, err)
 
-		// sleep to account for bad network conditions that could take up to 1 sec for
-		// Create request to succeed
-		time.Sleep(1 * time.Second)
-
 		t.Log("we should now be able to list 1 secret id")
 		ids, err = store.List(CITestEnvironment, "test")
 		assert.NoError(t, err)
@@ -113,10 +109,6 @@ func TestCreateList(t *testing.T) {
 		t.Log("write 1st secret for service 2")
 		err = store.Create(s2id1, data)
 		assert.NoError(t, err)
-
-		// sleep to account for bad network conditions that could take up to 1 sec for
-		// Create request to succeed
-		time.Sleep(1 * time.Second)
 
 		t.Log("we should now be able to list 2 secret ids for service 1")
 		ids, err = store.List(CITestEnvironment, "test")
@@ -142,16 +134,13 @@ func TestCreateList(t *testing.T) {
 func TestCreateListMultipleTimes(t *testing.T) {
 	data := "foo"
 	limit := 10
-	for _, store := range Stores() {
+	for name, store := range Stores() {
+		t.Logf("---- %s ----\n", name)
 		for i := 1; i <= limit; i++ {
 			newID := GetRandomTestSecretIdentifier()
 			t.Log(fmt.Sprintf("write %d-th secret %s for service", i, newID.String()))
 			err := store.Create(newID, data)
 			assert.NoError(t, err)
-
-			// sleep to account for bad network conditions that could take up to 1 sec for
-			// Create request to succeed
-			time.Sleep(1 * time.Second)
 
 			ids, err := store.List(CITestEnvironment, "test")
 			assert.NoError(t, err)
