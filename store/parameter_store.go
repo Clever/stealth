@@ -149,8 +149,11 @@ func (s *ParameterStore) ReadVersion(id SecretIdentifier, version int) (Secret, 
 		if awsErr, ok := errors.Cause(err).(awserr.Error); ok {
 			if awsErr.Code() == ssm.ErrCodeParameterNotFound {
 				return Secret{}, &IdentifierNotFoundError{Identifier: id}
+			} else if awsErr.Code() == ssm.ErrCodeParameterVersionNotFound {
+				return Secret{}, &VersionNotFoundError{Identifier: id, Version: version}
 			}
 		}
+
 		return Secret{}, fmt.Errorf("ParamStore error: %s. ", err)
 	}
 	return Secret{*resp.Parameter.Value, SecretMeta{Version: int(*resp.Parameter.Version)}}, nil
@@ -158,7 +161,47 @@ func (s *ParameterStore) ReadVersion(id SecretIdentifier, version int) (Secret, 
 
 // Updates a Secret from the store and increments version number.
 func (s *ParameterStore) Update(id SecretIdentifier, value string) (Secret, error) {
-	return Secret{}, nil
+	name := getParamNameFromName(id)
+	putParameterInput := &ssm.PutParameterInput{
+		Name:      aws.String(name),
+		Overwrite: aws.Bool(true), // true since we are updating existing secret
+		Type:      aws.String("SecureString"),
+		Value:     aws.String(value),
+	}
+	var failedRegions []string
+	var succeededRegions []string
+	oldSecretValue, err := s.Read(id)
+	if err != nil {
+		return Secret{}, err
+	}
+
+	for region, regionClient := range s.ssmClients {
+		_, err := regionClient.PutParameter(putParameterInput)
+		// If any region fails, this operation fails.
+		// This guarantee the invariant that the all secret values are consistent across regions.
+		if err != nil {
+			failedRegions = append(failedRegions, region)
+		} else {
+			succeededRegions = append(succeededRegions, region)
+		}
+	}
+	if len(failedRegions) > 0 {
+		for _, region := range succeededRegions {
+			regionClient := s.ssmClients[region]
+			putParameterInput := &ssm.PutParameterInput{
+				Name:      aws.String(name),
+				Overwrite: aws.Bool(true), // true since we are reverting the update,
+				Type:      aws.String("SecureString"),
+				Value:     aws.String(oldSecretValue.Data),
+			}
+			_, err := regionClient.PutParameter(putParameterInput)
+			if err != nil {
+				return Secret{}, fmt.Errorf("error update secret for (%s). try again. error: %s", region, err)
+			}
+		}
+		return Secret{}, fmt.Errorf("error updating secret for (%s). try again", strings.Join(failedRegions, ", "))
+	}
+	return s.Read(id)
 }
 
 // List gets secrets within a namespace (env/service)>
@@ -181,7 +224,6 @@ func (s *ParameterStore) List(env Environment, service string) ([]SecretIdentifi
 	if err != nil {
 		return results, err
 	}
-	// fmt.Printf("params[%d] for namespace=%s \n ", len(resp.Parameters), namespace)
 	for _, result := range resp.Parameters {
 		ident, err := getSecretIDFromParamName(*result.Name)
 		if err != nil {
@@ -199,7 +241,28 @@ func (s *ParameterStore) ListAll(env Environment) ([]SecretIdentifier, error) {
 
 // History gets history for a secret, returning all versions from the store.
 func (s *ParameterStore) History(id SecretIdentifier) ([]SecretMeta, error) {
-	return nil, nil
+	paramName := getParamNameFromName(id)
+	getParamHistoryInput := &ssm.GetParameterHistoryInput{
+		Name: aws.String(paramName),
+	}
+	apiClient := s.ssmClients[Region]
+	results := []SecretMeta{}
+	resp, err := apiClient.GetParameterHistory(getParamHistoryInput)
+	if err != nil {
+		if awsErr, ok := errors.Cause(err).(awserr.Error); ok {
+			if awsErr.Code() == ssm.ErrCodeParameterNotFound {
+				return results, &IdentifierNotFoundError{Identifier: id}
+			}
+		}
+		return results, err
+	}
+	for _, history := range resp.Parameters {
+		results = append(results, SecretMeta{
+			Created: *history.LastModifiedDate,
+			Version: int(*history.Version) - 1, // AWS is 1-indexed, hence subtract 1
+		})
+	}
+	return results, nil
 }
 
 // Delete deletes all versions of a secret
