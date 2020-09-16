@@ -8,8 +8,8 @@ import (
 // Stores returns all implemented SecretStores
 func Stores() map[string]SecretStore {
 	var stores = make(map[string]SecretStore)
-	stores["Memory"] = NewMemoryStore()
-	stores["Unicreds"] = NewUnicredsStore()
+	// stores["Memory"] = NewMemoryStore()
+	// stores["Unicreds"] = NewUnicredsStore()
 	stores["Paramstore"] = NewParameterStore()
 	return stores
 }
