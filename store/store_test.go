@@ -138,7 +138,7 @@ func TestCreateListMultipleTimes(t *testing.T) {
 		t.Logf("---- %s ----\n", name)
 		for i := 1; i <= limit; i++ {
 			newID := GetRandomTestSecretIdentifier()
-			t.Log(fmt.Sprintf("write %d-th secret %s for service", i, newID.String()))
+			t.Log(fmt.Sprintf("write secret #%d %s for service", i, newID.String()))
 			err := store.Create(newID, data)
 			assert.NoError(t, err)
 

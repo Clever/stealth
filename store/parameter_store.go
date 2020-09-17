@@ -113,7 +113,7 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 	return nil
 }
 
-// Read a Secret from the store. Returns the lastest version of the secret.
+// Read a Secret from the store. Returns the latest version of the secret.
 func (s *ParameterStore) Read(id SecretIdentifier) (Secret, error) {
 	paramName := getParamNameFromName(id)
 	getParameterInput := &ssm.GetParameterInput{
