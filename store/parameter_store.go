@@ -72,7 +72,7 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 	putParameterInput := &ssm.PutParameterInput{
 		Name:      aws.String(name),
 		Overwrite: aws.Bool(false), // false since we are creating a new secret
-		Type:      aws.String("SecureString"),
+		Type:      aws.String(ssm.ParameterTypeSecureString),
 		Value:     aws.String(value),
 	}
 	var failedRegions []string
@@ -167,7 +167,7 @@ func (s *ParameterStore) Update(id SecretIdentifier, value string) (Secret, erro
 	putParameterInput := &ssm.PutParameterInput{
 		Name:      aws.String(name),
 		Overwrite: aws.Bool(true), // true since we are updating existing secret
-		Type:      aws.String("SecureString"),
+		Type:      aws.String(ssm.ParameterTypeSecureString),
 		Value:     aws.String(value),
 	}
 	var failedRegions []string
@@ -193,7 +193,7 @@ func (s *ParameterStore) Update(id SecretIdentifier, value string) (Secret, erro
 			putParameterInput := &ssm.PutParameterInput{
 				Name:      aws.String(name),
 				Overwrite: aws.Bool(true), // true since we are reverting the update,
-				Type:      aws.String("SecureString"),
+				Type:      aws.String(ssm.ParameterTypeSecureString),
 				Value:     aws.String(oldSecretValue.Data),
 			}
 			_, err := regionClient.PutParameter(putParameterInput)
