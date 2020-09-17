@@ -89,6 +89,7 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 				}
 			}
 			failedRegions = append(failedRegions, region)
+			fmt.Println(fmt.Errorf("err during creation: %s", err))
 		} else {
 			succeededRegions = append(succeededRegions, region)
 		}
