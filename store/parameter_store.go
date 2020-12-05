@@ -323,12 +323,24 @@ func (s *ParameterStore) Delete(id SecretIdentifier) error {
 		Name: aws.String(getParamNameFromName(id)),
 	}
 	orderedRegions := getOrderedRegions()
+	var failedRegions []string
 	for _, region := range orderedRegions {
 		regionClient := s.ssmClients[region]
 		_, err := regionClient.DeleteParameter(deleteParameterInput)
 		// If any region fails, add to the return list of errors and continue.
 		if err != nil {
-			return err
+			failedRegions = append(failedRegions, region)
+		}
+	}
+	// retry one more time
+	if len(failedRegions) > 0 {
+		for _, region := range failedRegions {
+			regionClient := s.ssmClients[region]
+			_, err := regionClient.DeleteParameter(deleteParameterInput)
+			// If any region fails now, consider this Delete operation failed and return
+			if err != nil {
+				return fmt.Errorf("failed to delete secret from region %s. try again", region)
+			}
 		}
 	}
 	return nil
