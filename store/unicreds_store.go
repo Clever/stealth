@@ -27,6 +27,7 @@ func init() {
 // UnicredsStore is a secret store pointing at a prod and dev unicreds (https://github.com/Clever/unicreds) backend
 type UnicredsStore struct {
 	Environments map[Environment]UnicredsConfig
+	Region       string
 }
 
 // UnicredsConfig stores the configuration for a unicreds KMS and DynamoDB
@@ -93,7 +94,7 @@ func (s *UnicredsStore) Read(id SecretIdentifier) (Secret, error) {
 	secret, err := unicreds.GetHighestVersionSecret(s.path(id), id.String(), getEncryptionContext(id))
 	if err != nil {
 		if err.Error() == unicreds.ErrSecretNotFound.Error() {
-			return Secret{}, &IdentifierNotFoundError{Identifier: id}
+			return Secret{}, &IdentifierNotFoundError{Identifier: id, Region: Region}
 		}
 		return Secret{}, err
 	}
@@ -111,7 +112,7 @@ func (s *UnicredsStore) ReadVersion(id SecretIdentifier, version int) (Secret, e
 		_, err = s.Read(id)
 		if err != nil {
 			if err.Error() == unicreds.ErrSecretNotFound.Error() {
-				return Secret{}, &IdentifierNotFoundError{Identifier: id}
+				return Secret{}, &IdentifierNotFoundError{Identifier: id, Region: Region}
 			}
 			return Secret{}, err
 		}
@@ -125,7 +126,7 @@ func (s *UnicredsStore) Update(id SecretIdentifier, value string) (Secret, error
 	secret, err := s.Read(id)
 	if err != nil {
 		if err.Error() == unicreds.ErrSecretNotFound.Error() {
-			return Secret{}, &IdentifierNotFoundError{Identifier: id}
+			return Secret{}, &IdentifierNotFoundError{Identifier: id, Region: Region}
 		}
 		return Secret{}, err
 	}
@@ -205,7 +206,7 @@ func (s *UnicredsStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 		}
 	}
 	if versions == 0 {
-		return []SecretMeta{}, &IdentifierNotFoundError{Identifier: id}
+		return []SecretMeta{}, &IdentifierNotFoundError{Identifier: id, Region: Region}
 	}
 	return secretMetas[:versions], nil
 }

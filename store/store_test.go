@@ -49,7 +49,7 @@ func TestCreateRead(t *testing.T) {
 		t.Log("no secrets exist, to begin")
 		_, err := store.Read(id)
 		assert.Error(t, err)
-		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id})
+		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id, Region: Region})
 
 		t.Log("write a secret")
 		data := "bar"
@@ -165,14 +165,14 @@ func TestUpdateHistory(t *testing.T) {
 		t.Log("no secrets exist, to begin")
 		_, err := store.Read(id)
 		assert.Error(t, err)
-		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id})
+		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id, Region: Region})
 		_, err = store.History(id)
 		assert.Error(t, err)
-		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id})
+		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id, Region: Region})
 		data1 := "bar"
 		_, err = store.Update(id, data1)
 		assert.Error(t, err)
-		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id})
+		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id, Region: Region})
 
 		t.Log("STEP 1: write a secret")
 		err = store.Create(id, data1)
@@ -243,11 +243,11 @@ func TestDelete(t *testing.T) {
 		t.Log("we should not be able to read")
 		_, err = store.Read(id)
 		assert.Error(t, err)
-		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id})
+		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id, Region: Region})
 
 		t.Log("we should see no history")
 		_, err = store.History(id)
 		assert.Error(t, err)
-		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id})
+		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id, Region: Region})
 	}
 }

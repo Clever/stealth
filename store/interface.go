@@ -129,10 +129,11 @@ type SecretStore interface {
 // IdentifierNotFoundError occurs when a secret identifier cannot be found (during Read, History, Update)
 type IdentifierNotFoundError struct {
 	Identifier SecretIdentifier
+	Region     string
 }
 
 func (e *IdentifierNotFoundError) Error() string {
-	return fmt.Sprintf("Identifier not found: %s", e.Identifier)
+	return fmt.Sprintf("Identifier not found in region(%s): %s", e.Region, e.Identifier)
 }
 
 // InvalidIdentifierError occurs when a malformed identifier argument is given to a SecretStore method

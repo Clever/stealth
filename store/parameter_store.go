@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/pkg/errors"
@@ -19,6 +20,15 @@ func init() {
 		region = "us-west-1"
 	}
 	Region = region
+}
+
+func getOrderedRegions() []string {
+	return []string{
+		"us-west-1",
+		"us-west-2",
+		"us-east-1",
+		"us-east-2",
+	}
 }
 
 func getAPIClients() map[string]*ssm.SSM {
@@ -75,65 +85,71 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 		Type:      aws.String(ssm.ParameterTypeSecureString),
 		Value:     aws.String(value),
 	}
-	var failedRegions []string
-	var succeededRegions []string
-	exists := false
-	for region, regionClient := range s.ssmClients {
-		_, err := regionClient.PutParameter(putParameterInput)
-		// If any region fails, this operation fails.
-		// This guarantee the invariant that the all secret values are consistent across regions.
-		if err != nil {
-			if awsErr, ok := errors.Cause(err).(awserr.Error); ok {
-				if awsErr.Code() == ssm.ErrCodeParameterAlreadyExists {
-					exists = true
-				}
-			}
-			failedRegions = append(failedRegions, region)
-			fmt.Println(fmt.Errorf("err during creation: %s", err))
-		} else {
-			succeededRegions = append(succeededRegions, region)
+
+	_, errors := s.readForAllRegions(id)
+	for _, err := range errors {
+		// the secret exists in some regions, throw error
+		if err == nil {
+			return &IdentifierAlreadyExistsError{Identifier: id}
 		}
 	}
+
+	var abortOperation bool
+	var failedRegions []string
+	orderedRegions := getOrderedRegions()
+	for _, region := range orderedRegions {
+		regionClient := s.ssmClients[region]
+		_, err := regionClient.PutParameter(putParameterInput)
+		// If any region fails, we will retry one more time. If retry fails, this Read operation fails.
+		// This guarantee the invariant that the all secret values are consistent across regions.
+		if err != nil {
+			failedRegions = append(failedRegions, region)
+		}
+	}
+
+	abortOperation = false
+	// lets try one more time for the failed regions
 	if len(failedRegions) > 0 {
-		for _, region := range succeededRegions {
+		for _, region := range failedRegions {
+			regionClient := s.ssmClients[region]
+			_, err := regionClient.PutParameter(putParameterInput)
+			if err != nil {
+				abortOperation = true
+			}
+		}
+	}
+
+	// cleanup so that the Read() operation is idempotent
+	if abortOperation {
+		orderedRegions := getOrderedRegions()
+		for _, region := range orderedRegions {
 			regionClient := s.ssmClients[region]
 			deleteParameterInput := &ssm.DeleteParameterInput{
 				Name: aws.String(getParamNameFromName(id)),
 			}
 			_, err := regionClient.DeleteParameter(deleteParameterInput)
 			if err != nil {
-				return fmt.Errorf("Error creating secret for (%s). try again. Error: %s", region, err)
+				return fmt.Errorf("Error during cleanup of secret creation for (%s). try again. error: %s", region, err)
 			}
 		}
-		if exists {
-			return &IdentifierAlreadyExistsError{Identifier: id}
-		}
-		return fmt.Errorf("error creating secret for (%s). try again", strings.Join(failedRegions, ", "))
+		return fmt.Errorf("Error creating secret (%s). reverted all PutParameter operations. try creating secret again", id)
 	}
+
 	return nil
 }
 
 // Read a Secret from the store. Returns the latest version of the secret.
 func (s *ParameterStore) Read(id SecretIdentifier) (Secret, error) {
-	paramName := getParamNameFromName(id)
-	getParameterInput := &ssm.GetParameterInput{
-		Name:           aws.String(paramName),
-		WithDecryption: aws.Bool(true),
-	}
-
 	var resp *ssm.GetParameterOutput
-	var err error
-	for _, regionClient := range s.ssmClients {
-		resp, err = regionClient.GetParameter(getParameterInput)
+	regionalOutput, errors := s.readForAllRegions(id)
+	orderedRegions := getOrderedRegions()
+	for _, region := range orderedRegions {
+		err := errors[region]
 		if err != nil {
-			if awsErr, ok := errors.Cause(err).(awserr.Error); ok {
-				if awsErr.Code() == ssm.ErrCodeParameterNotFound {
-					return Secret{}, &IdentifierNotFoundError{Identifier: id}
-				}
-			}
-			return Secret{}, fmt.Errorf("ParamStore error: %s. ", err)
+			return Secret{}, &IdentifierNotFoundError{Identifier: id, Region: region}
 		}
 	}
+	resp = regionalOutput[Region]
 	return Secret{*resp.Parameter.Value, SecretMeta{Version: int(*resp.Parameter.Version)}}, nil
 }
 
@@ -150,7 +166,7 @@ func (s *ParameterStore) ReadVersion(id SecretIdentifier, version int) (Secret, 
 	if err != nil {
 		if awsErr, ok := errors.Cause(err).(awserr.Error); ok {
 			if awsErr.Code() == ssm.ErrCodeParameterNotFound {
-				return Secret{}, &IdentifierNotFoundError{Identifier: id}
+				return Secret{}, &IdentifierNotFoundError{Identifier: id, Region: Region}
 			} else if awsErr.Code() == ssm.ErrCodeParameterVersionNotFound {
 				return Secret{}, &VersionNotFoundError{Identifier: id, Version: version}
 			}
@@ -170,25 +186,41 @@ func (s *ParameterStore) Update(id SecretIdentifier, value string) (Secret, erro
 		Type:      aws.String(ssm.ParameterTypeSecureString),
 		Value:     aws.String(value),
 	}
+
+	var abortOperation bool
 	var failedRegions []string
-	var succeededRegions []string
 	oldSecretValue, err := s.Read(id)
 	if err != nil {
 		return Secret{}, err
 	}
 
-	for region, regionClient := range s.ssmClients {
+	orderedRegions := getOrderedRegions()
+	for _, region := range orderedRegions {
+		regionClient := s.ssmClients[region]
 		_, err := regionClient.PutParameter(putParameterInput)
-		// If any region fails, this operation fails.
+		// If any region fails, we will retry one more time. If retry fails, this Update operation fails.
 		// This guarantee the invariant that the all secret values are consistent across regions.
 		if err != nil {
 			failedRegions = append(failedRegions, region)
-		} else {
-			succeededRegions = append(succeededRegions, region)
 		}
 	}
+
+	abortOperation = false
+	// lets try one more time for the failed regions
 	if len(failedRegions) > 0 {
-		for _, region := range succeededRegions {
+		for _, region := range failedRegions {
+			regionClient := s.ssmClients[region]
+			_, err := regionClient.PutParameter(putParameterInput)
+			if err != nil {
+				abortOperation = true
+			}
+		}
+	}
+
+	// cleanup so that Update is idempotent
+	if abortOperation {
+		orderedRegions := getOrderedRegions()
+		for _, region := range orderedRegions {
 			regionClient := s.ssmClients[region]
 			putParameterInput := &ssm.PutParameterInput{
 				Name:      aws.String(name),
@@ -198,11 +230,12 @@ func (s *ParameterStore) Update(id SecretIdentifier, value string) (Secret, erro
 			}
 			_, err := regionClient.PutParameter(putParameterInput)
 			if err != nil {
-				return Secret{}, fmt.Errorf("error update secret for (%s). try again. error: %s", region, err)
+				return Secret{}, fmt.Errorf("error update secret for region(%s). try again. error: %s", region, err)
 			}
 		}
-		return Secret{}, fmt.Errorf("error updating secret for (%s). try again", strings.Join(failedRegions, ", "))
+		return Secret{}, fmt.Errorf("error updating secret for (%s). try again", id)
 	}
+
 	return s.Read(id)
 }
 
@@ -222,12 +255,12 @@ func (s *ParameterStore) List(env Environment, service string) ([]SecretIdentifi
 		},
 	}
 	results := []SecretIdentifier{}
-	// We retry 3 times and return the maximum of the results
+	// We retry DefaultRetryerMaxNumRetries = 3 times and return the maximum of the results
 	// Per https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_DescribeParameters.html
-	// DescribeParameters RRequest results are returned on a best-effort basis.
+	// DescribeParameters request results are returned on a best-effort basis.
 	// If you specify MaxResults in the request, the response includes information up to the limit specified.
 	// The number of items returned, however, can be between zero and the value of MaxResults.
-	retryCount := 3
+	retryCount := client.DefaultRetryerMaxNumRetries
 	for i := 1; i <= retryCount; i++ {
 		resultsPerTry := []SecretIdentifier{}
 		resp, err := apiClient.DescribeParameters(describeParametersByPathInput)
@@ -270,7 +303,7 @@ func (s *ParameterStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 	if err != nil {
 		if awsErr, ok := errors.Cause(err).(awserr.Error); ok {
 			if awsErr.Code() == ssm.ErrCodeParameterNotFound {
-				return results, &IdentifierNotFoundError{Identifier: id}
+				return results, &IdentifierNotFoundError{Identifier: id, Region: Region}
 			}
 		}
 		return results, err
@@ -289,7 +322,9 @@ func (s *ParameterStore) Delete(id SecretIdentifier) error {
 	deleteParameterInput := &ssm.DeleteParameterInput{
 		Name: aws.String(getParamNameFromName(id)),
 	}
-	for _, regionClient := range s.ssmClients {
+	orderedRegions := getOrderedRegions()
+	for _, region := range orderedRegions {
+		regionClient := s.ssmClients[region]
 		_, err := regionClient.DeleteParameter(deleteParameterInput)
 		// If any region fails, add to the return list of errors and continue.
 		if err != nil {
@@ -304,4 +339,24 @@ func NewParameterStore() *ParameterStore {
 	return &ParameterStore{
 		ssmClients: getAPIClients(),
 	}
+}
+
+// readForAllRegions reada given secret from all AWS regions and return status for the corresponding region.
+// If a read for a region fails, an IdentifierNotFoundError is returned
+func (s *ParameterStore) readForAllRegions(id SecretIdentifier) (map[string]*ssm.GetParameterOutput, map[string]error) {
+	output := make(map[string]*ssm.GetParameterOutput)
+	errors := make(map[string]error)
+	paramName := getParamNameFromName(id)
+	getParameterInput := &ssm.GetParameterInput{
+		Name:           aws.String(paramName),
+		WithDecryption: aws.Bool(true),
+	}
+	orderedRegions := getOrderedRegions()
+	for _, region := range orderedRegions {
+		regionClient := s.ssmClients[region]
+		resp, err := regionClient.GetParameter(getParameterInput)
+		output[region] = resp
+		errors[region] = err
+	}
+	return output, errors
 }
