@@ -73,7 +73,8 @@ func getParamNameFromNameAtVersion(id SecretIdentifier, version int) string {
 
 // ParameterStore is a secret store that uses AWS SSM Parameter store
 type ParameterStore struct {
-	ssmClients map[string]*ssm.SSM
+	ssmClients        map[string]*ssm.SSM
+	maxResultsToQuery int64
 }
 
 // Create creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
@@ -245,42 +246,49 @@ func (s *ParameterStore) List(env Environment, service string) ([]SecretIdentifi
 	namespace := getNamespace(id.EnvironmentString(), service)
 	apiClient := s.ssmClients[Region]
 
-	describeParametersByPathInput := &ssm.DescribeParametersInput{
-		ParameterFilters: []*ssm.ParameterStringFilter{
-			&ssm.ParameterStringFilter{
-				Key:    aws.String("Path"),
-				Option: aws.String("Recursive"),
-				Values: []*string{aws.String(namespace)},
-			},
-		},
-	}
-	results := []SecretIdentifier{}
-	// We retry DefaultRetryerMaxNumRetries = 3 times and return the maximum of the results
 	// Per https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_DescribeParameters.html
-	// DescribeParameters request results are returned on a best-effort basis.
-	// If you specify MaxResults in the request, the response includes information up to the limit specified.
-	// The number of items returned, however, can be between zero and the value of MaxResults.
+	// DescribeParameters request results are returned on a best-effort basis. Hence, we need to rely on NextToken
+	// to fully fetch teh list of parameters and additionally we have to retry multiple times to fully fetch all the parameters.
+	// We retry DefaultRetryerMaxNumRetries = 3 times and return the maximum of the results
+	results := []SecretIdentifier{}
 	retryCount := client.DefaultRetryerMaxNumRetries
 	for i := 1; i <= retryCount; i++ {
 		resultsPerTry := []SecretIdentifier{}
-		resp, err := apiClient.DescribeParameters(describeParametersByPathInput)
-		if err != nil {
-			if i < retryCount {
-				continue
-			} else {
-				return resultsPerTry, err
+		hasNextToken := true
+		nextTokenStr := ""
+		for hasNextToken {
+			describeParametersByPathInput := &ssm.DescribeParametersInput{
+				ParameterFilters: []*ssm.ParameterStringFilter{
+					&ssm.ParameterStringFilter{
+						Key:    aws.String("Path"),
+						Option: aws.String("Recursive"),
+						Values: []*string{aws.String(namespace)},
+					},
+				},
+				MaxResults: aws.Int64(s.maxResultsToQuery),
 			}
-		}
-		for _, result := range resp.Parameters {
-			ident, err := getSecretIDFromParamName(*result.Name)
+			if nextTokenStr != "" {
+				describeParametersByPathInput.NextToken = aws.String(nextTokenStr)
+			}
+
+			resp, err := apiClient.DescribeParameters(describeParametersByPathInput)
 			if err != nil {
-				return resultsPerTry, err
+				return []SecretIdentifier{}, err
 			}
-			resultsPerTry = append(resultsPerTry, ident)
+			for _, result := range resp.Parameters {
+				ident, _ := getSecretIDFromParamName(*result.Name)
+				resultsPerTry = append(resultsPerTry, ident)
+			}
+			if resp.NextToken != nil && *resp.NextToken != "" {
+				nextTokenStr = *resp.NextToken
+			} else {
+				hasNextToken = false
+			}
 		}
 		if len(resultsPerTry) >= len(results) {
 			results = resultsPerTry
 		}
+		// retry again in a second
 		time.Sleep(1 * time.Second)
 	}
 	return results, nil
@@ -347,9 +355,10 @@ func (s *ParameterStore) Delete(id SecretIdentifier) error {
 }
 
 // NewParameterStore creates a secret store that points at ParameterStore
-func NewParameterStore() *ParameterStore {
+func NewParameterStore(maxResultsToQuery int64) *ParameterStore {
 	return &ParameterStore{
-		ssmClients: getAPIClients(),
+		ssmClients:        getAPIClients(),
+		maxResultsToQuery: maxResultsToQuery,
 	}
 }
 
