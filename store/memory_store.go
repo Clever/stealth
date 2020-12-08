@@ -42,7 +42,7 @@ func (s *MemoryStore) Read(id SecretIdentifier) (Secret, error) {
 	if history, ok := s.history[id]; ok {
 		return history.Secrets[len(history.Secrets)-1], nil
 	}
-	return Secret{}, &IdentifierNotFoundError{Identifier: id}
+	return Secret{}, &IdentifierNotFoundError{Identifier: id, Region: ""}
 }
 
 // ReadVersion reads a version of a secret
@@ -53,7 +53,7 @@ func (s *MemoryStore) ReadVersion(id SecretIdentifier, version int) (Secret, err
 		}
 		return Secret{}, &VersionNotFoundError{Version: version, Identifier: id}
 	}
-	return Secret{}, &IdentifierNotFoundError{Identifier: id}
+	return Secret{}, &IdentifierNotFoundError{Identifier: id, Region: ""}
 }
 
 // Update updates a secret in the secret store
@@ -65,7 +65,7 @@ func (s *MemoryStore) Update(id SecretIdentifier, value string) (Secret, error) 
 
 	// Return error if secret does not exist
 	if history, ok = s.history[id]; !ok {
-		return Secret{}, &IdentifierNotFoundError{Identifier: id}
+		return Secret{}, &IdentifierNotFoundError{Identifier: id, Region: ""}
 	}
 
 	// Append newest version
@@ -117,7 +117,7 @@ func (s *MemoryStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 		}
 		return secrets, nil
 	}
-	return []SecretMeta{}, &IdentifierNotFoundError{Identifier: id}
+	return []SecretMeta{}, &IdentifierNotFoundError{Identifier: id, Region: ""}
 }
 
 // Delete deletes all versions of a secret
@@ -126,7 +126,7 @@ func (s *MemoryStore) Delete(id SecretIdentifier) error {
 		delete(s.history, id)
 		return nil
 	}
-	return &IdentifierNotFoundError{Identifier: id}
+	return &IdentifierNotFoundError{Identifier: id, Region: ""}
 }
 
 // NewMemoryStore creates an in-memory secret store

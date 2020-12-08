@@ -85,6 +85,8 @@ func main() {
 func getEnvironment(environment string) store.Environment {
 	if environment == "development" {
 		return store.DevelopmentEnvironment
+	} else if environment == "ci-test" {
+		return store.CITestEnvironment
 	} else if environment != "production" {
 		log.Fatal("Environment flag must be 'development' or 'production'")
 	}

@@ -103,7 +103,7 @@ type SecretStore interface {
 	// Creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
 	Create(id SecretIdentifier, value string) error
 
-	// Read a Secret from the store. Returns the lastest version of the secret.
+	// Read a Secret from the store. Returns the latest version of the secret.
 	Read(id SecretIdentifier) (Secret, error)
 
 	// ReadVersion reads a specific version of a secret from the store.
@@ -129,9 +129,13 @@ type SecretStore interface {
 // IdentifierNotFoundError occurs when a secret identifier cannot be found (during Read, History, Update)
 type IdentifierNotFoundError struct {
 	Identifier SecretIdentifier
+	Region     string
 }
 
 func (e *IdentifierNotFoundError) Error() string {
+	if e.Region != "" {
+		return fmt.Sprintf("Identifier not found in region(%s): %s", e.Region, e.Identifier)
+	}
 	return fmt.Sprintf("Identifier not found: %s", e.Identifier)
 }
 

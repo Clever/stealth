@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -44,11 +45,15 @@ func TestCreateRead(t *testing.T) {
 	id := GetRandomTestSecretIdentifier()
 	for name, store := range Stores() {
 		defer store.Delete(id)
+		region := Region
+		if name == "Memory" {
+			region = ""
+		}
 		t.Logf("---- %s ----\n", name)
 		t.Log("no secrets exist, to begin")
 		_, err := store.Read(id)
 		assert.Error(t, err)
-		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id})
+		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id, Region: region})
 
 		t.Log("write a secret")
 		data := "bar"
@@ -70,10 +75,13 @@ func TestCreateRead(t *testing.T) {
 func TestCreateList(t *testing.T) {
 	// service 1 has 2 identifiers
 	s1id1 := GetRandomTestSecretIdentifier()
+	test1 := s1id1.Service
 	s1id2 := GetRandomTestSecretIdentifier()
+	s1id2.Service = test1
+
 	// service 2 has 1 identifier
 	s2id1 := GetRandomTestSecretIdentifier()
-	s2id1.Service = "test2"
+	test2 := s2id1.Service
 
 	data := "foo"
 	for name, store := range Stores() {
@@ -83,11 +91,11 @@ func TestCreateList(t *testing.T) {
 		t.Logf("---- %s ----\n", name)
 
 		t.Log("errors if given invalid environment")
-		_, err := store.List(-1, "test")
+		_, err := store.List(-1, test1)
 		assert.Error(t, err)
 
 		t.Log("no secrets exist, to begin")
-		ids, err := store.List(CITestEnvironment, "test")
+		ids, err := store.List(CITestEnvironment, test1)
 		assert.NoError(t, err)
 		assert.Equal(t, len(ids), 0)
 
@@ -96,7 +104,7 @@ func TestCreateList(t *testing.T) {
 		assert.NoError(t, err)
 
 		t.Log("we should now be able to list 1 secret id")
-		ids, err = store.List(CITestEnvironment, "test")
+		ids, err = store.List(CITestEnvironment, test1)
 		assert.NoError(t, err)
 		assert.Equal(t, len(ids), 1)
 		assert.Equal(t, ids, []SecretIdentifier{s1id1})
@@ -109,15 +117,18 @@ func TestCreateList(t *testing.T) {
 		err = store.Create(s2id1, data)
 		assert.NoError(t, err)
 
+		// so that the Create calls go through
+		time.Sleep(1 * time.Second)
+
 		t.Log("we should now be able to list 2 secret ids for service 1")
-		ids, err = store.List(CITestEnvironment, "test")
+		ids, err = store.List(CITestEnvironment, test1)
 		assert.NoError(t, err)
 		expectedIds := []SecretIdentifier{s1id1, s1id2}
 		sort.Sort(ByIDString(expectedIds))
 		assert.Equal(t, ids, expectedIds)
 
 		t.Log("we should now be able to list 1 secret id for service 2")
-		ids, err = store.List(CITestEnvironment, "test2")
+		ids, err = store.List(CITestEnvironment, test2)
 		assert.NoError(t, err)
 		assert.Equal(t, ids, []SecretIdentifier{s2id1})
 
@@ -130,22 +141,54 @@ func TestCreateList(t *testing.T) {
 	}
 }
 
+func TestCreateListMultipleTimes(t *testing.T) {
+	data := "foo"
+	limit := 10
+	for name, store := range Stores() {
+		t.Logf("---- %s ----\n", name)
+		testServiceName := GetRandomTestSecretIdentifier().Service
+
+		for i := 1; i <= limit; i++ {
+			newID := GetRandomTestSecretIdentifier()
+			newID.Service = testServiceName
+			t.Log(fmt.Sprintf("write secret #%d %s for service", i, newID.String()))
+			err := store.Create(newID, data)
+			assert.NoError(t, err)
+
+			ids, err := store.List(CITestEnvironment, testServiceName)
+			assert.NoError(t, err)
+			assert.True(t, len(ids) <= i)
+			defer store.Delete(newID)
+		}
+
+		t.Log("we should now be able to list secrets and match the count")
+		ids, err := store.List(CITestEnvironment, testServiceName)
+		assert.NoError(t, err)
+		assert.Equal(t, len(ids), limit)
+	}
+	return
+}
+
 func TestUpdateHistory(t *testing.T) {
 	id := GetRandomTestSecretIdentifier()
 	for name, store := range Stores() {
 		defer store.Delete(id)
+		region := Region
+		if name == "Memory" {
+			region = ""
+		}
 		t.Logf("---- %s ----\n", name)
 		t.Log("no secrets exist, to begin")
 		_, err := store.Read(id)
 		assert.Error(t, err)
-		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id})
+		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id, Region: region})
 		_, err = store.History(id)
 		assert.Error(t, err)
-		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id})
+		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id, Region: region})
 		data1 := "bar"
 		_, err = store.Update(id, data1)
 		assert.Error(t, err)
-		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id})
+		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id, Region: region})
 
 		t.Log("STEP 1: write a secret")
 		err = store.Create(id, data1)
@@ -204,6 +247,10 @@ func TestDelete(t *testing.T) {
 	id := GetRandomTestSecretIdentifier()
 	for name, store := range Stores() {
 		defer store.Delete(id)
+		region := Region
+		if name == "Memory" {
+			region = ""
+		}
 		t.Logf("---- %s ----\n", name)
 		t.Log("creating secret")
 		data1 := "bar"
@@ -216,11 +263,11 @@ func TestDelete(t *testing.T) {
 		t.Log("we should not be able to read")
 		_, err = store.Read(id)
 		assert.Error(t, err)
-		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id})
+		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id, Region: region})
 
 		t.Log("we should see no history")
 		_, err = store.History(id)
 		assert.Error(t, err)
-		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id})
+		assert.Equal(t, err, &IdentifierNotFoundError{Identifier: id, Region: region})
 	}
 }
