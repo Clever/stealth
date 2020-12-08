@@ -22,6 +22,9 @@ func init() {
 	Region = region
 }
 
+// getOrderedRegions provides guarantees that actions on ParamStore will happen
+// within a specific order every time. This is helpful for any errors with inconsistent
+// state
 func getOrderedRegions() []string {
 	return []string{
 		"us-west-1",
@@ -87,7 +90,7 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 		Value:     aws.String(value),
 	}
 
-	_, errors := s.readForAllRegions(id)
+	_, errors := s.readForAllRegions(getParamNameFromName(id))
 	for _, err := range errors {
 		// the secret exists in some regions, throw error
 		if err == nil {
@@ -142,12 +145,17 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 // Read a Secret from the store. Returns the latest version of the secret.
 func (s *ParameterStore) Read(id SecretIdentifier) (Secret, error) {
 	var resp *ssm.GetParameterOutput
-	regionalOutput, errors := s.readForAllRegions(id)
+	regionalOutput, regionalErrors := s.readForAllRegions(getParamNameFromName(id))
 	orderedRegions := getOrderedRegions()
 	for _, region := range orderedRegions {
-		err := errors[region]
+		err := regionalErrors[region]
 		if err != nil {
-			return Secret{}, &IdentifierNotFoundError{Identifier: id, Region: region}
+			if awsErr, ok := errors.Cause(err).(awserr.Error); ok {
+				if awsErr.Code() == ssm.ErrCodeParameterNotFound {
+					return Secret{}, &IdentifierNotFoundError{Identifier: id, Region: region}
+				}
+			}
+			return Secret{}, fmt.Errorf("ParamStore error: %s. ", err)
 		}
 	}
 	resp = regionalOutput[Region]
@@ -157,24 +165,23 @@ func (s *ParameterStore) Read(id SecretIdentifier) (Secret, error) {
 // ReadVersion reads a specific version of a secret from the store.
 // Version is 0-indexed
 func (s *ParameterStore) ReadVersion(id SecretIdentifier, version int) (Secret, error) {
-	paramName := getParamNameFromNameAtVersion(id, version)
-	getParameterInput := &ssm.GetParameterInput{
-		Name:           aws.String(paramName),
-		WithDecryption: aws.Bool(true),
-	}
-	apiClient := s.ssmClients[Region]
-	resp, err := apiClient.GetParameter(getParameterInput)
-	if err != nil {
-		if awsErr, ok := errors.Cause(err).(awserr.Error); ok {
-			if awsErr.Code() == ssm.ErrCodeParameterNotFound {
-				return Secret{}, &IdentifierNotFoundError{Identifier: id, Region: Region}
-			} else if awsErr.Code() == ssm.ErrCodeParameterVersionNotFound {
-				return Secret{}, &VersionNotFoundError{Identifier: id, Version: version}
+	var resp *ssm.GetParameterOutput
+	regionalOutput, regionalErrors := s.readForAllRegions(getParamNameFromNameAtVersion(id, version))
+	orderedRegions := getOrderedRegions()
+	for _, region := range orderedRegions {
+		err := regionalErrors[region]
+		if err != nil {
+			if awsErr, ok := errors.Cause(err).(awserr.Error); ok {
+				if awsErr.Code() == ssm.ErrCodeParameterNotFound {
+					return Secret{}, &IdentifierNotFoundError{Identifier: id, Region: region}
+				} else if awsErr.Code() == ssm.ErrCodeParameterVersionNotFound {
+					return Secret{}, &VersionNotFoundError{Identifier: id, Version: version}
+				}
 			}
+			return Secret{}, fmt.Errorf("ParamStore error: %s. ", err)
 		}
-
-		return Secret{}, fmt.Errorf("ParamStore error: %s. ", err)
 	}
+	resp = regionalOutput[Region]
 	return Secret{*resp.Parameter.Value, SecretMeta{Version: int(*resp.Parameter.Version)}}, nil
 }
 
@@ -362,12 +369,11 @@ func NewParameterStore(maxResultsToQuery int64) *ParameterStore {
 	}
 }
 
-// readForAllRegions reada given secret from all AWS regions and return status for the corresponding region.
-// If a read for a region fails, an IdentifierNotFoundError is returned
-func (s *ParameterStore) readForAllRegions(id SecretIdentifier) (map[string]*ssm.GetParameterOutput, map[string]error) {
+// readForAllRegions reads given secret from all AWS regions and return status for the corresponding region.
+// If a read for a region fails, the corresponding error is returned
+func (s *ParameterStore) readForAllRegions(paramName string) (map[string]*ssm.GetParameterOutput, map[string]error) {
 	output := make(map[string]*ssm.GetParameterOutput)
 	errors := make(map[string]error)
-	paramName := getParamNameFromName(id)
 	getParameterInput := &ssm.GetParameterInput{
 		Name:           aws.String(paramName),
 		WithDecryption: aws.Bool(true),

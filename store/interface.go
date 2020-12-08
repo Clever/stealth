@@ -133,7 +133,10 @@ type IdentifierNotFoundError struct {
 }
 
 func (e *IdentifierNotFoundError) Error() string {
-	return fmt.Sprintf("Identifier not found in region(%s): %s", e.Region, e.Identifier)
+	if e.Region != "" {
+		return fmt.Sprintf("Identifier not found in region(%s): %s", e.Region, e.Identifier)
+	}
+	return fmt.Sprintf("Identifier not found: %s", e.Identifier)
 }
 
 // InvalidIdentifierError occurs when a malformed identifier argument is given to a SecretStore method
