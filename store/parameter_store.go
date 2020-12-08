@@ -71,7 +71,17 @@ func getParamNameFromName(id SecretIdentifier) string {
 func getParamNameFromNameAtVersion(id SecretIdentifier, version int) string {
 	paramName := getParamNameFromName(id)
 	// parameterStore is 1-indexed, hence we bump the version number from the SecretStore
-	return fmt.Sprintf("%s:%d", paramName, version+1)
+	return fmt.Sprintf("%s:%d", paramName, convertToSSMVersion(version))
+}
+
+// convertFromSSMVersion converts ParamStore 1-indexed version to be 0-indexed
+func convertFromSSMVersion(version int) int {
+	return version - 1
+}
+
+// convertToSSMVersion converts  0-indexed version specifier to be 1-indexed for ParamStore
+func convertToSSMVersion(version int) int {
+	return version + 1
 }
 
 // ParameterStore is a secret store that uses AWS SSM Parameter store
@@ -159,7 +169,7 @@ func (s *ParameterStore) Read(id SecretIdentifier) (Secret, error) {
 		}
 	}
 	resp = regionalOutput[Region]
-	return Secret{*resp.Parameter.Value, SecretMeta{Version: int(*resp.Parameter.Version)}}, nil
+	return Secret{*resp.Parameter.Value, SecretMeta{Version: convertFromSSMVersion(int(*resp.Parameter.Version))}}, nil
 }
 
 // ReadVersion reads a specific version of a secret from the store.
@@ -182,7 +192,7 @@ func (s *ParameterStore) ReadVersion(id SecretIdentifier, version int) (Secret, 
 		}
 	}
 	resp = regionalOutput[Region]
-	return Secret{*resp.Parameter.Value, SecretMeta{Version: int(*resp.Parameter.Version)}}, nil
+	return Secret{*resp.Parameter.Value, SecretMeta{Version: convertFromSSMVersion(int(*resp.Parameter.Version))}}, nil
 }
 
 // Update updates a Secret from the store and increments version number.
@@ -326,7 +336,7 @@ func (s *ParameterStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 	for _, history := range resp.Parameters {
 		results = append(results, SecretMeta{
 			Created: *history.LastModifiedDate,
-			Version: int(*history.Version) - 1, // AWS is 1-indexed, hence subtract 1
+			Version: convertFromSSMVersion(int(*history.Version)),
 		})
 	}
 	return results, nil
