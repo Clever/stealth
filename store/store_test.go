@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -115,6 +116,9 @@ func TestCreateList(t *testing.T) {
 		t.Log("write 1st secret for service 2")
 		err = store.Create(s2id1, data)
 		assert.NoError(t, err)
+
+		// so that the Create calls go through
+		time.Sleep(1 * time.Second)
 
 		t.Log("we should now be able to list 2 secret ids for service 1")
 		ids, err = store.List(CITestEnvironment, test1)
