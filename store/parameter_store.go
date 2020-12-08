@@ -8,7 +8,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/pkg/errors"
@@ -266,9 +265,9 @@ func (s *ParameterStore) List(env Environment, service string) ([]SecretIdentifi
 	// Per https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_DescribeParameters.html
 	// DescribeParameters request results are returned on a best-effort basis. Hence, we need to rely on NextToken
 	// to fully fetch teh list of parameters and additionally we have to retry multiple times to fully fetch all the parameters.
-	// We retry DefaultRetryerMaxNumRetries = 3 times and return the maximum of the results
+	// We retry 2 times and return the maximum of the results
 	results := []SecretIdentifier{}
-	retryCount := client.DefaultRetryerMaxNumRetries
+	retryCount := 2
 	for i := 1; i <= retryCount; i++ {
 		resultsPerTry := []SecretIdentifier{}
 		hasNextToken := true
@@ -301,6 +300,8 @@ func (s *ParameterStore) List(env Environment, service string) ([]SecretIdentifi
 			} else {
 				hasNextToken = false
 			}
+			// Try not to overwhelm rate limits
+			time.Sleep(100 * time.Millisecond)
 		}
 		if len(resultsPerTry) >= len(results) {
 			results = resultsPerTry
