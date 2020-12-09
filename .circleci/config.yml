@@ -19,3 +19,4 @@ jobs:
     - run: make install_deps
     - run: make build
     - run: make test
+    - run: if [ "${CIRCLE_BRANCH}" == "master" ]; then $HOME/ci-scripts/circleci/github-release $GH_RELEASE_TOKEN release; fi;
