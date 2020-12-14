@@ -102,7 +102,7 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 	_, errors := s.readForAllRegions(getParamNameFromName(id))
 	for _, err := range errors {
 		// the secret exists in some regions, throw error
-		if err == nil {
+		if err != nil {
 			return &IdentifierAlreadyExistsError{Identifier: id}
 		}
 	}
