@@ -168,7 +168,7 @@ func (s *ParameterStore) Read(id SecretIdentifier) (Secret, error) {
 		}
 	}
 	resp = regionalOutput[Region]
-	return Secret{*resp.Parameter.Value, SecretMeta{Version: convertFromSSMVersion(int(*resp.Parameter.Version))}}, nil
+	return Secret{*resp.Parameter.Value, SecretMeta{Created: *resp.Parameter.LastModifiedDate, Version: convertFromSSMVersion(int(*resp.Parameter.Version))}}, nil
 }
 
 // ReadVersion reads a specific version of a secret from the store.
@@ -191,7 +191,7 @@ func (s *ParameterStore) ReadVersion(id SecretIdentifier, version int) (Secret, 
 		}
 	}
 	resp = regionalOutput[Region]
-	return Secret{*resp.Parameter.Value, SecretMeta{Version: convertFromSSMVersion(int(*resp.Parameter.Version))}}, nil
+	return Secret{*resp.Parameter.Value, SecretMeta{Created: *resp.Parameter.LastModifiedDate, Version: convertFromSSMVersion(int(*resp.Parameter.Version))}}, nil
 }
 
 // Update updates a Secret from the store and increments version number.
