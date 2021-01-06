@@ -154,7 +154,7 @@ type InvalidEnvironmentError struct {
 }
 
 func (e *InvalidEnvironmentError) Error() string {
-	return fmt.Sprintf("Unable to authenticate with the store using the given credentials")
+	return fmt.Sprintf("environment is not compatible. supplied %s, expects `production`, `development`, or `ci-test`.", e.Identifier)
 }
 
 // CurrentDeployError occurs when a parameter name has suffix current-deploy.
@@ -164,7 +164,7 @@ type CurrentDeployError struct {
 }
 
 func (e *CurrentDeployError) Error() string {
-	return fmt.Sprintf("current-deploy parameter should not be surfaced")
+	return fmt.Sprintf("current-deploy parameter should not be surfaced for parameter %s", e.Identifier)
 }
 
 // IdentifierAlreadyExistsError occurs when Create is called and an identifier already exists
