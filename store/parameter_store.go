@@ -21,6 +21,16 @@ func init() {
 	Region = region
 }
 
+// CurrentDeployError occurs when a parameter name has suffix current-deploy.
+// Such parameters are private to catapult service and should not be surfaced via interface
+type CurrentDeployError struct {
+	Identifier string
+}
+
+func (e *CurrentDeployError) Error() string {
+	return fmt.Sprintf("current-deploy parameter should not be surfaced for parameter %s", e.Identifier)
+}
+
 // getOrderedRegions provides guarantees that actions on ParamStore will happen
 // within a specific order every time. This is helpful for any errors with inconsistent
 // state
@@ -55,7 +65,10 @@ func getSecretIDFromParamName(name string) (SecretIdentifier, error) {
 	parts := strings.Split(name, "/")
 	env, err := environmentStringToInt(parts[1])
 	if err != nil {
-		return SecretIdentifier{}, err
+		return SecretIdentifier{}, &InvalidEnvironmentError{Identifier: name}
+	}
+	if strings.HasSuffix(name, "current-deploy") {
+		return SecretIdentifier{}, &CurrentDeployError{Identifier: name}
 	}
 	return SecretIdentifier{Environment: env, Service: parts[2], Key: parts[3]}, nil
 }
@@ -292,7 +305,11 @@ func (s *ParameterStore) List(env Environment, service string) ([]SecretIdentifi
 				return []SecretIdentifier{}, err
 			}
 			for _, result := range resp.Parameters {
-				ident, _ := getSecretIDFromParamName(*result.Name)
+				ident, err := getSecretIDFromParamName(*result.Name)
+				if _, ok := err.(*CurrentDeployError); ok {
+					// secrets that fail with CurrentDeployError are intended to be read by machines, and not returned for human consumption.
+					continue
+				}
 				resultsPerTry = append(resultsPerTry, ident)
 			}
 			if resp.NextToken != nil && *resp.NextToken != "" {
