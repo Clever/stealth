@@ -57,6 +57,9 @@ func getSecretIDFromParamName(name string) (SecretIdentifier, error) {
 	if err != nil {
 		return SecretIdentifier{}, err
 	}
+	if strings.HasSuffix(name, "current-deploy") {
+		return SecretIdentifier{}, fmt.Errorf("current-deploy parameter should not be surfaced")
+	}
 	return SecretIdentifier{Environment: env, Service: parts[2], Key: parts[3]}, nil
 }
 
@@ -292,7 +295,11 @@ func (s *ParameterStore) List(env Environment, service string) ([]SecretIdentifi
 				return []SecretIdentifier{}, err
 			}
 			for _, result := range resp.Parameters {
-				ident, _ := getSecretIDFromParamName(*result.Name)
+				ident, err := getSecretIDFromParamName(*result.Name)
+				if err != nil {
+					// if any secrets cannot be converted, skip
+					continue
+				}
 				resultsPerTry = append(resultsPerTry, ident)
 			}
 			if resp.NextToken != nil && *resp.NextToken != "" {
