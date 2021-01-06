@@ -93,7 +93,7 @@ func stringToSecretIdentifier(s string) (SecretIdentifier, error) {
 	}
 	env, err := environmentStringToInt(parts[0])
 	if err != nil {
-		return SecretIdentifier{}, fmt.Errorf("unable to create SecretIdentifier from string -- invalid environment: %s", s)
+		return SecretIdentifier{}, &InvalidEnvironmentError{Identifier: s}
 	}
 	return SecretIdentifier{env, parts[1], parts[2]}, nil
 }
@@ -146,6 +146,25 @@ type InvalidIdentifierError struct {
 
 func (e *InvalidIdentifierError) Error() string {
 	return fmt.Sprintf("The given identifier is invalid: %s", e.Identifier)
+}
+
+// InvalidEnvironmentError occurs when a parameter name is using non-compatible environment name
+type InvalidEnvironmentError struct {
+	Identifier string
+}
+
+func (e *InvalidEnvironmentError) Error() string {
+	return fmt.Sprintf("Unable to authenticate with the store using the given credentials")
+}
+
+// CurrentDeployError occurs when a parameter name has suffix current-deploy.
+// Such parameters are private to catapult service and should not be surfaced via interface
+type CurrentDeployError struct {
+	Identifier string
+}
+
+func (e *CurrentDeployError) Error() string {
+	return fmt.Sprintf("current-deploy parameter should not be surfaced")
 }
 
 // IdentifierAlreadyExistsError occurs when Create is called and an identifier already exists
