@@ -21,6 +21,16 @@ func init() {
 	Region = region
 }
 
+// CurrentDeployError occurs when a parameter name has suffix current-deploy.
+// Such parameters are private to catapult service and should not be surfaced via interface
+type CurrentDeployError struct {
+	Identifier string
+}
+
+func (e *CurrentDeployError) Error() string {
+	return fmt.Sprintf("current-deploy parameter should not be surfaced for parameter %s", e.Identifier)
+}
+
 // getOrderedRegions provides guarantees that actions on ParamStore will happen
 // within a specific order every time. This is helpful for any errors with inconsistent
 // state
@@ -297,7 +307,7 @@ func (s *ParameterStore) List(env Environment, service string) ([]SecretIdentifi
 			for _, result := range resp.Parameters {
 				ident, err := getSecretIDFromParamName(*result.Name)
 				if _, ok := err.(*CurrentDeployError); ok {
-					// if any secrets cannot be converted due to CurrentDeployError, skip
+					// secrets that fail with CurrentDeployError are intended to be read by machines, and not returned for human consumption.
 					continue
 				}
 				resultsPerTry = append(resultsPerTry, ident)

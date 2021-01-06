@@ -157,16 +157,6 @@ func (e *InvalidEnvironmentError) Error() string {
 	return fmt.Sprintf("environment is not compatible. supplied %s, expects `production`, `development`, or `ci-test`.", e.Identifier)
 }
 
-// CurrentDeployError occurs when a parameter name has suffix current-deploy.
-// Such parameters are private to catapult service and should not be surfaced via interface
-type CurrentDeployError struct {
-	Identifier string
-}
-
-func (e *CurrentDeployError) Error() string {
-	return fmt.Sprintf("current-deploy parameter should not be surfaced for parameter %s", e.Identifier)
-}
-
 // IdentifierAlreadyExistsError occurs when Create is called and an identifier already exists
 type IdentifierAlreadyExistsError struct {
 	Identifier SecretIdentifier
