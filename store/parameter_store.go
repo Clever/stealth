@@ -89,15 +89,15 @@ func getTagsFromName(id SecretIdentifier) []*ssm.Tag {
 	tagValue3 := id.Key
 
 	tags := []*ssm.Tag{
-		{
+		&ssm.Tag{
 			Key:   aws.String(tagName1),
 			Value: aws.String(tagValue1),
 		},
-		{
+		&ssm.Tag{
 			Key:   aws.String(tagName2),
 			Value: aws.String(tagValue2),
 		},
-		{
+		&ssm.Tag{
 			Key:   aws.String(tagName3),
 			Value: aws.String(tagValue3),
 		},
@@ -139,7 +139,6 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 		Tags:      tags,
 		Value:     aws.String(value),
 	}
-
 	_, errors := s.readForAllRegions(getParamNameFromName(id))
 	for _, err := range errors {
 		// the secret exists in some regions, throw error
