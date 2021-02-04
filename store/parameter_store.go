@@ -81,18 +81,22 @@ func getParamNameFromName(id SecretIdentifier) string {
 
 // getTagsFromName takes the SecretIdentifier id and returns a list/array of the resource's Tags
 func getTagsFromName(id SecretIdentifier) []*ssm.Tag {
+	env := id.EnvironmentString()
+	app := id.Service
+	name := id.Key
+
 	tags := []*ssm.Tag{
 		&ssm.Tag{
-			Key:   aws.String("env"),
-			Value: aws.String(id.EnvironmentString()),
+			Key:   aws.String("environment"),
+			Value: aws.String(env),
 		},
 		&ssm.Tag{
-			Key:   aws.String("app"),
-			Value: aws.String(id.Service),
+			Key:   aws.String("application"),
+			Value: aws.String(app),
 		},
 		&ssm.Tag{
-			Key:   aws.String("name"),
-			Value: aws.String(id.Key),
+			Key:   aws.String("key"),
+			Value: aws.String(name),
 		},
 	}
 	return tags
