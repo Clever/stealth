@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
-	rgsAPI "github.com/aws/aws-sdk-go/service/resourcegroupstaggingapi"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/pkg/errors"
 )
@@ -81,7 +80,7 @@ func getParamNameFromName(id SecretIdentifier) string {
 }
 
 // getTagsFromName takes the SecretIdentifier id and returns a list/array of the resource's Tags
-func getTagsFromName(id SecretIdentifier) []rgsAPI.Tag {
+func getTagsFromName(id SecretIdentifier) []*ssm.Tag {
 	tagName1 := "env"
 	tagValue1 := id.EnvironmentString()
 	tagName2 := "app"
@@ -89,7 +88,7 @@ func getTagsFromName(id SecretIdentifier) []rgsAPI.Tag {
 	tagName3 := "name"
 	tagValue3 := id.Key
 
-	tags := []rgsAPI.Tag{
+	tags := []*ssm.Tag{
 		{
 			Key:   aws.String(tagName1),
 			Value: aws.String(tagValue1),
@@ -132,12 +131,12 @@ type ParameterStore struct {
 // Create creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
 func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 	name := getParamNameFromName(id)
-	fmt.Println("this is name", name)
-	fmt.Println("this is value", value)
+	tags := getTagsFromName(id)
 	putParameterInput := &ssm.PutParameterInput{
 		Name:      aws.String(name),
 		Overwrite: aws.Bool(false), // false since we are creating a new secret
 		Type:      aws.String(ssm.ParameterTypeSecureString),
+		Tags:      tags,
 		Value:     aws.String(value),
 	}
 
