@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// deleteSecretsFromStores deletes all secrets from all stores
+// deleteSecretsFromStores deletes all secrets from all stores in CITestEnvironment
 func deleteSecretsFromStores() {
 	log.Println("Deleting secrets from all stores...")
 	for name, store := range Stores() {
