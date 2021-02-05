@@ -136,6 +136,7 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 		Tags:      tags,
 		Value:     aws.String(value),
 	}
+
 	_, errors := s.readForAllRegions(getParamNameFromName(id))
 	for _, err := range errors {
 		// the secret exists in some regions, throw error
