@@ -2,6 +2,8 @@ package store
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"sort"
 	"testing"
 	"time"
@@ -12,6 +14,33 @@ import (
 // Other possible tests
 // - keys shouldn't be case sensitive
 // - should fail if key contains invalid chars / format (must be [a-z0-9-])
+
+// TestMain runs deleteSecretsFromStores before running the tests
+func TestMain(m *testing.M) {
+	deleteSecretsFromStores()
+	code := m.Run()
+	os.Exit(code)
+}
+
+// deleteSecretsFromStores deletes all secrets from all stores in CITestEnvironment
+func deleteSecretsFromStores() {
+	log.Println("Deleting secrets from all stores...")
+	for name, store := range Stores() {
+		ids, err := store.ListAll(CITestEnvironment)
+		if err != nil {
+			errMsg := fmt.Errorf("Unable to get secrets from %s. error: %s", name, err)
+			fmt.Println(errMsg)
+		} else if len(ids) > 0 {
+			for _, id := range ids {
+				store.Delete(id)
+			}
+			log.Printf("All secrets from %s successfully deleted", name)
+		} else {
+			log.Printf("No secrets in %s", name)
+		}
+	}
+	log.Println("End of deleting secrets from all stores")
+}
 
 func TestIdentifer(t *testing.T) {
 	id := SecretIdentifier{Environment: CITestEnvironment, Service: "service", Key: "foo"}

@@ -79,6 +79,29 @@ func getParamNameFromName(id SecretIdentifier) string {
 	return fmt.Sprintf("%s/%s", getNamespace(id.EnvironmentString(), id.Service), id.Key)
 }
 
+// getTagsFromName takes the SecretIdentifier id and returns a list/array of the resource's Tags
+func getTagsFromName(id SecretIdentifier) []*ssm.Tag {
+	env := id.EnvironmentString()
+	app := id.Service
+	name := id.Key
+
+	tags := []*ssm.Tag{
+		&ssm.Tag{
+			Key:   aws.String("environment"),
+			Value: aws.String(env),
+		},
+		&ssm.Tag{
+			Key:   aws.String("application"),
+			Value: aws.String(app),
+		},
+		&ssm.Tag{
+			Key:   aws.String("key"),
+			Value: aws.String(name),
+		},
+	}
+	return tags
+}
+
 // getParamNameFromNameAtVersion constructs AWS SSM paramname with version
 func getParamNameFromNameAtVersion(id SecretIdentifier, version int) string {
 	paramName := getParamNameFromName(id)
@@ -105,10 +128,12 @@ type ParameterStore struct {
 // Create creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
 func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 	name := getParamNameFromName(id)
+	tags := getTagsFromName(id)
 	putParameterInput := &ssm.PutParameterInput{
 		Name:      aws.String(name),
 		Overwrite: aws.Bool(false), // false since we are creating a new secret
 		Type:      aws.String(ssm.ParameterTypeSecureString),
+		Tags:      tags,
 		Value:     aws.String(value),
 	}
 
