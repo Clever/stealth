@@ -31,6 +31,9 @@ var (
 	writeService     = cmdWrite.Flag("service", "Service that the key belongs to.").Required().String()
 	writeKey         = cmdWrite.Flag("key", "Key to write.").Required().String()
 	writeValue       = cmdWrite.Flag("value", "Value to write.").Required().String()
+	
+	cmdList         = app.Command("list", "Lists all application names within the store")
+	listEnvironment = cmdList.Flag("environment", "Environment that the secret belongs to.").Required().String()
 )
 
 func main() {
@@ -76,6 +79,16 @@ func main() {
 			log.Fatalf("Failed to write secret: %s", err)
 		}
 		fmt.Printf("Wrote secret %s\n", id.String())
+	
+	case cmdList.FullCommand():
+		s :=  store.NewUnicredsStore()
+		secrets, err := s.ListAll(getEnvironment(*listEnvironment))
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, secret := range secrets {
+			fmt.Printf("%s.%s.%s\n", secret.EnvironmentString(), secret.Service, secret.Key)
+		}
 	}
 
 }
