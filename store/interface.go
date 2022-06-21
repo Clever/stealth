@@ -37,6 +37,18 @@ const (
 	CITestEnvironment
 )
 
+func (e Environment) String() string {
+	environments := [...]string{
+		"production",
+		"development",
+		"ci",
+	}
+	if e < ProductionEnvironment || e > CITestEnvironment {
+		return "unknown"
+	}
+	return environments[e]
+}
+
 // SecretIdentifier is a lookup key for a secret, including the production flag, the service name, and the specific key
 type SecretIdentifier struct {
 	Environment  Environment
