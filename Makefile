@@ -1,22 +1,20 @@
-.PHONY: all test build run
-SHELL := /bin/bash
+.PHONY: all test build run install_deps
 
 include golang.mk
 .DEFAULT_GOAL := test # override default goal set in library makefile
 
-.PHONY: all test build clean
 SHELL := /bin/bash
-PKGS = $(shell GO15VENDOREXPERIMENT=1 go list ./... | grep -v "vendor/" | grep -v "db" | grep -v /vendor)
-BINARY_NAME := "stealth"
-$(eval $(call golang-version-check,1.13))
+APP_NAME ?= stealth
+EXECUTABLE = $(APP_NAME)
+PKG = github.com/Clever/$(APP_NAME)
+PKGS = $(shell go list ./... | grep -v /gen-go | grep -v /tools)
+$(eval $(call golang-version-check,1.16))
 
-
-all: build test
+all: test build
 
 test: $(PKGS)
 $(PKGS): golang-test-all-deps
 	$(call golang-test-all,$@)
-
 
 build:
 	go build
@@ -24,6 +22,6 @@ build:
 run: build
 	./stealth
 
-
-install_deps:
+install_deps: vendor
+vendor: go.mod go.sum
 	go mod vendor
