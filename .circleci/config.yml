@@ -1,19 +1,46 @@
-version: 2
-jobs:
-  build:
-    working_directory: /go/src/github.com/Clever/stealth
+version: 2.1
+executors:
+  common-executor:
+    working_directory: ~/go/src/github.com/Clever/stealth
     docker:
-    - image: circleci/golang:1.13-stretch
+    - image: cimg/go:1.16
     environment:
       GOPRIVATE: github.com/Clever/*
       CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
       CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
+
+commands:
+  clone-ci-scripts:
+    description: Clone the ci-scripts repo
     steps:
     - run:
-        command: cd $HOME && git clone --depth 1 -v https://github.com/Clever/ci-scripts.git && cd ci-scripts && git show --oneline -s
+        command: cd .. && git clone --depth 1 -v https://github.com/Clever/ci-scripts.git && cd ci-scripts && git show --oneline -s
         name: Clone ci-scripts
+
+jobs:
+  build:
+    executor: common-executor
+    steps:
     - checkout
-    - setup_remote_docker
+    - run: make install_deps
+    - run: make build
+    - persist_to_workspace:
+        root: ~/go/src/github.com/Clever
+        paths: "."
+
+  publish:
+    executor: common-executor
+    steps:
+    - attach_workspace:
+        at: ~/go/src/github.com/Clever
+    - clone-ci-scripts
+    - run: if [ "${CIRCLE_BRANCH}" == "master" ]; then $HOME/ci-scripts/circleci/github-release $GH_RELEASE_TOKEN; fi;
+
+  unit-test:
+    executor: common-executor
+    steps:
+    - attach_workspace:
+        at: ~/go/src/github.com/Clever
     - run:
         command: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
         name: Set up CircleCI artifacts directories
@@ -22,7 +49,16 @@ jobs:
     - run:
         name: Add github.com to known hosts
         command: mkdir -p ~/.ssh && touch ~/.ssh/known_hosts && echo 'github.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==' >> ~/.ssh/known_hosts
-    - run: make install_deps
-    - run: make build
     - run: make test
-    - run: if [ "${CIRCLE_BRANCH}" == "master" ]; then $HOME/ci-scripts/circleci/github-release $GH_RELEASE_TOKEN; fi;
+
+workflows:
+  version: 2.1
+  build_test_publish:
+    jobs:
+    - build
+    - unit-test:
+        requires:
+        - build
+    - publish:
+        requires:
+        - build
