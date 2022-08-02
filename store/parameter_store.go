@@ -13,12 +13,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+var DefaultRegion = "us-west-1"
+
 func init() {
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
-		region = "us-west-1"
+		region = DefaultRegion
 	}
-	Region = region
 }
 
 // CurrentDeployError occurs when a parameter name has suffix current-deploy.
@@ -31,10 +32,10 @@ func (e *CurrentDeployError) Error() string {
 	return fmt.Sprintf("current-deploy parameter should not be surfaced for parameter %s", e.Identifier)
 }
 
-// getOrderedRegions provides guarantees that actions on ParamStore will happen
+// GetOrderedRegions provides guarantees that actions on ParamStore will happen
 // within a specific order every time. This is helpful for any errors with inconsistent
 // state
-func getOrderedRegions() []string {
+func (s *ParameterStore) GetOrderedRegions() []string {
 	return []string{
 		"us-west-1",
 		"us-west-2",
@@ -121,6 +122,7 @@ func convertToSSMVersion(version int) int {
 
 // ParameterStore is a secret store that uses AWS SSM Parameter store
 type ParameterStore struct {
+	ParamRegion       string
 	ssmClients        map[string]*ssm.SSM
 	maxResultsToQuery int64
 }
@@ -147,7 +149,7 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 
 	var abortOperation bool
 	var failedRegions []string
-	orderedRegions := getOrderedRegions()
+	orderedRegions := s.GetOrderedRegions()
 	for _, region := range orderedRegions {
 		regionClient := s.ssmClients[region]
 		_, err := regionClient.PutParameter(putParameterInput)
@@ -172,7 +174,7 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 
 	// cleanup so that the Read() operation is idempotent
 	if abortOperation {
-		orderedRegions := getOrderedRegions()
+		orderedRegions := s.GetOrderedRegions()
 		for _, region := range orderedRegions {
 			regionClient := s.ssmClients[region]
 			deleteParameterInput := &ssm.DeleteParameterInput{
@@ -193,7 +195,7 @@ func (s *ParameterStore) Create(id SecretIdentifier, value string) error {
 func (s *ParameterStore) Read(id SecretIdentifier) (Secret, error) {
 	var resp *ssm.GetParameterOutput
 	regionalOutput, regionalErrors := s.readForAllRegions(getParamNameFromName(id))
-	orderedRegions := getOrderedRegions()
+	orderedRegions := s.GetOrderedRegions()
 	for _, region := range orderedRegions {
 		err := regionalErrors[region]
 		if err != nil {
@@ -205,7 +207,7 @@ func (s *ParameterStore) Read(id SecretIdentifier) (Secret, error) {
 			return Secret{}, fmt.Errorf("ParamStore error: %s. ", err)
 		}
 	}
-	resp = regionalOutput[Region]
+	resp = regionalOutput[s.ParamRegion]
 	return Secret{*resp.Parameter.Value, SecretMeta{Created: *resp.Parameter.LastModifiedDate, Version: convertFromSSMVersion(int(*resp.Parameter.Version))}}, nil
 }
 
@@ -214,7 +216,7 @@ func (s *ParameterStore) Read(id SecretIdentifier) (Secret, error) {
 func (s *ParameterStore) ReadVersion(id SecretIdentifier, version int) (Secret, error) {
 	var resp *ssm.GetParameterOutput
 	regionalOutput, regionalErrors := s.readForAllRegions(getParamNameFromNameAtVersion(id, version))
-	orderedRegions := getOrderedRegions()
+	orderedRegions := s.GetOrderedRegions()
 	for _, region := range orderedRegions {
 		err := regionalErrors[region]
 		if err != nil {
@@ -228,7 +230,7 @@ func (s *ParameterStore) ReadVersion(id SecretIdentifier, version int) (Secret, 
 			return Secret{}, fmt.Errorf("ParamStore error: %s. ", err)
 		}
 	}
-	resp = regionalOutput[Region]
+	resp = regionalOutput[s.ParamRegion]
 	return Secret{*resp.Parameter.Value, SecretMeta{Created: *resp.Parameter.LastModifiedDate, Version: convertFromSSMVersion(int(*resp.Parameter.Version))}}, nil
 }
 
@@ -249,7 +251,7 @@ func (s *ParameterStore) Update(id SecretIdentifier, value string) (Secret, erro
 		return Secret{}, err
 	}
 
-	orderedRegions := getOrderedRegions()
+	orderedRegions := s.GetOrderedRegions()
 	for _, region := range orderedRegions {
 		regionClient := s.ssmClients[region]
 		_, err := regionClient.PutParameter(putParameterInput)
@@ -274,7 +276,7 @@ func (s *ParameterStore) Update(id SecretIdentifier, value string) (Secret, erro
 
 	// cleanup so that Update is idempotent
 	if abortOperation {
-		orderedRegions := getOrderedRegions()
+		orderedRegions := s.GetOrderedRegions()
 		for _, region := range orderedRegions {
 			regionClient := s.ssmClients[region]
 			putParameterInput := &ssm.PutParameterInput{
@@ -298,7 +300,7 @@ func (s *ParameterStore) Update(id SecretIdentifier, value string) (Secret, erro
 func (s *ParameterStore) List(env Environment, service string) ([]SecretIdentifier, error) {
 	id := SecretIdentifier{env, service, ""}
 	namespace := getNamespace(id.EnvironmentString(), service)
-	apiClient := s.ssmClients[Region]
+	apiClient := s.ssmClients[s.ParamRegion]
 
 	// Per https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_DescribeParameters.html
 	// DescribeParameters request results are returned on a best-effort basis. Hence, we need to rely on NextToken
@@ -365,7 +367,7 @@ func (s *ParameterStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 	getParamHistoryInput := &ssm.GetParameterHistoryInput{
 		Name: aws.String(paramName),
 	}
-	apiClient := s.ssmClients[Region]
+	apiClient := s.ssmClients[s.ParamRegion]
 	results := []SecretMeta{}
 	resp, err := apiClient.GetParameterHistory(getParamHistoryInput)
 	if err != nil {
@@ -390,7 +392,7 @@ func (s *ParameterStore) Delete(id SecretIdentifier) error {
 	deleteParameterInput := &ssm.DeleteParameterInput{
 		Name: aws.String(getParamNameFromName(id)),
 	}
-	orderedRegions := getOrderedRegions()
+	orderedRegions := s.GetOrderedRegions()
 	var failedRegions []string
 	for _, region := range orderedRegions {
 		regionClient := s.ssmClients[region]
@@ -417,6 +419,7 @@ func (s *ParameterStore) Delete(id SecretIdentifier) error {
 // NewParameterStore creates a secret store that points at ParameterStore
 func NewParameterStore(maxResultsToQuery int64) *ParameterStore {
 	return &ParameterStore{
+		ParamRegion:       DefaultRegion,
 		ssmClients:        getAPIClients(),
 		maxResultsToQuery: maxResultsToQuery,
 	}
@@ -431,7 +434,7 @@ func (s *ParameterStore) readForAllRegions(paramName string) (map[string]*ssm.Ge
 		Name:           aws.String(paramName),
 		WithDecryption: aws.Bool(true),
 	}
-	orderedRegions := getOrderedRegions()
+	orderedRegions := s.GetOrderedRegions()
 	for _, region := range orderedRegions {
 		regionClient := s.ssmClients[region]
 		resp, err := regionClient.GetParameter(getParameterInput)
