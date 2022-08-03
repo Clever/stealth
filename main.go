@@ -31,6 +31,10 @@ var (
 	writeService     = cmdWrite.Flag("service", "Service that the key belongs to.").Required().String()
 	writeKey         = cmdWrite.Flag("key", "Key to write.").Required().String()
 	writeValue       = cmdWrite.Flag("value", "Value to write.").Required().String()
+
+	cmdHealth         = app.Command("health", "Checks for health of all secrets for a service across 4 AWS regions, ensuring there is no discrepancies in values.")
+	healthEnvironment = cmdHealth.Flag("environment", "Environment that the secret belongs to.").Required().String()
+	healthService     = cmdHealth.Flag("service", "Service that the key belongs to.").Required().String()
 )
 
 func main() {
@@ -76,6 +80,33 @@ func main() {
 			log.Fatalf("Failed to write secret: %s", err)
 		}
 		fmt.Printf("Wrote secret %s\n", id.String())
+
+	case cmdHealth.FullCommand():
+		s := store.NewParameterStore(50)
+		var stateOfSecrets = map[string]string{}
+		for _, region := range s.GetOrderedRegions() {
+			s.ParamRegion = region
+			fmt.Printf("Checking store region %s\n", s.ParamRegion)
+			var secrets []store.SecretIdentifier
+			var err error
+			var secretValue store.Secret
+			if secrets, err = s.List(getEnvironment(*healthEnvironment), *healthService); err != nil {
+				log.Fatalf("Failed to list secrets for : %s in %s: %s", *healthService, *healthEnvironment, err)
+			}
+			for _, id := range secrets {
+				if secretValue, err = s.Read(id); err != nil {
+					fmt.Printf("Error reading secret %s in region %s. %s \n", id.String(), region, err)
+				}
+				if val, ok := stateOfSecrets[id.String()]; ok {
+					if secretValue.Data != val {
+						fmt.Printf("Secret %s differs in region %s from us-west-1. \n", id.String(), region)
+					}
+				} else {
+					stateOfSecrets[id.String()] = secretValue.Data
+				}
+			}
+			fmt.Printf("Finished checking secrets in region %s.\n", region)
+		}
 	}
 
 }
