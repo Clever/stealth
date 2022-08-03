@@ -94,17 +94,14 @@ func main() {
 				log.Fatalf("Failed to list secrets for : %s in %s: %s", *healthService, *healthEnvironment, err)
 			}
 			for _, id := range secrets {
+				if secretValue, err = s.Read(id); err != nil {
+					fmt.Printf("Error reading secret %s in region %s. %s \n", id.String(), region, err)
+				}
 				if val, ok := stateOfSecrets[id.String()]; ok {
-					if secretValue, err = s.Read(id); err != nil {
-						log.Fatalf("Error reading secret %s in region %s. %s \n", id.String(), region, err)
-					}
 					if secretValue.Data != val {
-						log.Fatalf("Secret %s differs in region %s from us-west-1. \n", id.String(), region)
+						fmt.Printf("Secret %s differs in region %s from us-west-1. \n", id.String(), region)
 					}
 				} else {
-					if secretValue, err = s.Read(id); err != nil {
-						log.Fatalf("Error reading secret %s in region %s. %s \n", id.String(), region, err)
-					}
 					stateOfSecrets[id.String()] = secretValue.Data
 				}
 			}
