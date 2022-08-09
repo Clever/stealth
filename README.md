@@ -36,6 +36,12 @@ To write a secret:
     ./stealth write --environment [production OR development] -- service [service-name] --key [key name] --value [key value]
 ```
 
+To identify discrepancies in secret values across 4 U.S. regions of AWS.
+
+```bash
+    ./stealth health --environment=ENVIRONMENT --service=SERVICE
+```
+
 # tests
 
 To run tests, use:
