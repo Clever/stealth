@@ -2,7 +2,6 @@ package store
 
 import (
 	"math/rand"
-	"os"
 	"time"
 )
 
@@ -10,14 +9,9 @@ import (
 func Stores() map[string]SecretStore {
 	var stores = make(map[string]SecretStore)
 	stores["Memory"] = NewMemoryStore()
-	// enable testing of these store only in non-CI environments
-	ci := os.Getenv("CI")
-	isCI := (ci == "true")
-	if !isCI {
-		stores["Unicreds"] = NewUnicredsStore()
-		// maxResultsToQuery = 5 so that we test the pagination logic of the List command
-		stores["Paramstore"] = NewParameterStore(5)
-	}
+	stores["Unicreds"] = NewUnicredsStore()
+	// maxResultsToQuery = 5 so that we test the pagination logic of the List command
+	stores["Paramstore"] = NewParameterStore(5)
 	return stores
 }
 
