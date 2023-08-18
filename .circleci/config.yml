@@ -52,7 +52,7 @@ jobs:
     - clone-ci-scripts
     - run:
         name: Authenticate to AWS via role
-        command: . ../ci-scripts/circleci/utils && assume_role_with_web_identity $OIDC_STEALTH_ROLE default
+        command: . ../ci-scripts/circleci/utils && install_awscli && assume_role_with_web_identity $OIDC_STEALTH_ROLE default
     - run: make test
 
 workflows:
