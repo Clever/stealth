@@ -14,7 +14,7 @@ commands:
     description: Clone the ci-scripts repo
     steps:
     - run:
-        command: cd .. &&  git clone -v https://github.com/Clever/ci-scripts.git && cd ci-scripts && git checkout SECNG-1770 && git show --oneline -s
+        command: cd .. && git clone --depth 1 -v https://github.com/Clever/ci-scripts.git && cd ci-scripts && git show --oneline -s
         name: Clone ci-scripts
 
 jobs:
