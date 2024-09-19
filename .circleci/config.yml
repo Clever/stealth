@@ -34,7 +34,7 @@ jobs:
     - attach_workspace:
         at: ~/go/src/github.com/Clever
     - clone-ci-scripts
-    - run: if [ "${CIRCLE_BRANCH}" == "master" ]; then $HOME/ci-scripts/circleci/github-release $GH_RELEASE_TOKEN; fi;
+    - run: if [ "${CIRCLE_BRANCH}" == "master" ]; then ../ci-scripts/circleci/github-release $GH_RELEASE_TOKEN; fi;
 
   unit-test:
     executor: common-executor
