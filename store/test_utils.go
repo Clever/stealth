@@ -5,11 +5,10 @@ import (
 	"time"
 )
 
-// Stores returns all implemented SecretStores
+// Stores returns all implemented SecretStores memory and param
 func Stores() map[string]SecretStore {
 	var stores = make(map[string]SecretStore)
 	stores["Memory"] = NewMemoryStore()
-	stores["Unicreds"] = NewUnicredsStore()
 	// maxResultsToQuery = 5 so that we test the pagination logic of the List command
 	stores["Paramstore"] = NewParameterStore(5)
 	return stores

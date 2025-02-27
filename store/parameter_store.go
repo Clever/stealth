@@ -14,12 +14,14 @@ import (
 )
 
 var DefaultRegion = "us-west-1"
+var Region string
 
 func init() {
 	region := os.Getenv("AWS_REGION")
 	if region == "" {
 		region = DefaultRegion
 	}
+	Region = region
 }
 
 // CurrentDeployError occurs when a parameter name has suffix current-deploy.
