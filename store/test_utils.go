@@ -1,16 +1,27 @@
 package store
 
 import (
+	"fmt"
 	"math/rand"
+	"os"
 	"time"
 )
+
+func isCI() bool {
+	fmt.Printf("CI var value %s\n", os.Getenv("CI"))
+	return os.Getenv("CI") == "true"
+}
 
 // Stores returns all implemented SecretStores memory and param
 func Stores() map[string]SecretStore {
 	var stores = make(map[string]SecretStore)
 	stores["Memory"] = NewMemoryStore()
-	// maxResultsToQuery = 5 so that we test the pagination logic of the List command
-	stores["Paramstore"] = NewParameterStore(5)
+	// don't test in CI environment, since it would require a role assumption we
+	// dont' want to support
+	if !isCI() {
+		// maxResultsToQuery = 5 so that we test the pagination logic of the List command
+		stores["Paramstore"] = NewParameterStore(5)
+	}
 	return stores
 }
 
