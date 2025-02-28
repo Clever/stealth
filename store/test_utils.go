@@ -1,14 +1,12 @@
 package store
 
 import (
-	"fmt"
 	"math/rand"
 	"os"
 	"time"
 )
 
 func isCI() bool {
-	fmt.Printf("CI var value %s\n", os.Getenv("CI"))
 	return os.Getenv("CI") == "true"
 }
 
