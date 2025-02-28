@@ -15,7 +15,7 @@ func Stores() map[string]SecretStore {
 	var stores = make(map[string]SecretStore)
 	stores["Memory"] = NewMemoryStore()
 	// don't test in CI environment, since it would require a role assumption we
-	// dont' want to support
+	// don't want to support
 	if !isCI() {
 		// maxResultsToQuery = 5 so that we test the pagination logic of the List command
 		stores["Paramstore"] = NewParameterStore(5)
