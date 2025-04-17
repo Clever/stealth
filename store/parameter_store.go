@@ -209,7 +209,8 @@ func (s *ParameterStore) Read(id SecretIdentifier) (Secret, error) {
 	for _, region := range orderedRegions {
 		err := regionalErrors[region]
 		if err != nil {
-			if errors.As(err, &types.ParameterNotFound{}) {
+			var pnf *types.ParameterNotFound
+			if errors.As(err, &pnf) {
 				return Secret{}, &IdentifierNotFoundError{Identifier: id, Region: region}
 			}
 			return Secret{}, fmt.Errorf("ParamStore error: %s", err)
@@ -228,9 +229,11 @@ func (s *ParameterStore) ReadVersion(id SecretIdentifier, version int) (Secret, 
 	for _, region := range orderedRegions {
 		err := regionalErrors[region]
 		if err != nil {
-			if errors.As(err, &types.ParameterNotFound{}) {
+			var pnf *types.ParameterNotFound
+			var pvnf *types.ParameterVersionNotFound
+			if errors.As(err, &pnf) {
 				return Secret{}, &IdentifierNotFoundError{Identifier: id, Region: region}
-			} else if errors.As(err, &types.ParameterVersionNotFound{}) {
+			} else if errors.As(err, &pvnf) {
 				return Secret{}, &VersionNotFoundError{Identifier: id, Version: version}
 			}
 			return Secret{}, fmt.Errorf("ParamStore error: %s. ", err)
@@ -377,7 +380,8 @@ func (s *ParameterStore) History(id SecretIdentifier) ([]SecretMeta, error) {
 	results := []SecretMeta{}
 	resp, err := apiClient.GetParameterHistory(context.TODO(), getParamHistoryInput)
 	if err != nil {
-		if errors.As(err, &types.ParameterNotFound{}) {
+		var pnf *types.ParameterNotFound
+		if errors.As(err, &pnf) {
 			return results, &IdentifierNotFoundError{Identifier: id, Region: Region}
 		}
 		return results, fmt.Errorf("ParamStore error: %s", err)
