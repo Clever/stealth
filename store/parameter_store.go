@@ -9,11 +9,18 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/pkg/errors"
 )
+
+var secretMgmtRoleByEnv = map[string]string{
+	"development": "arn:aws:iam::577638400844:role/SecretsManagement",
+	"production":  "arn:aws:iam::195275663288:role/SecretsManagement", // future prod role
+}
 
 var DefaultRegion = "us-west-1"
 var Region string
@@ -47,19 +54,34 @@ func (s *ParameterStore) GetOrderedRegions() []string {
 	}
 }
 
-func getV2Config(region string) aws.Config {
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
+func getV2Config(region string, env string) aws.Config {
+	cfg, err := config.LoadDefaultConfig(
+		context.TODO(),
+		config.WithRegion(region),
+		// force the SDK to use identityengineer SSO profile:
+		config.WithSharedConfigProfile("identityengineer"),
+	)
+
 	if err != nil {
 		panic("unable to load SDK config, " + err.Error())
+	}
+
+	// If this env maps to a SecretsManagement role, assume *only* that role.
+	if arn, ok := secretMgmtRoleByEnv[env]; ok {
+		stsClient := sts.NewFromConfig(cfg)
+		provider := stscreds.NewAssumeRoleProvider(stsClient, arn, func(o *stscreds.AssumeRoleOptions) {
+			o.RoleSessionName = "stealth-secretsmanagement"
+		})
+		cfg.Credentials = aws.NewCredentialsCache(provider)
 	}
 	return cfg
 }
 
-func getAPIClients() map[string]*ssm.Client {
+func getAPIClients(env string) map[string]*ssm.Client {
 	return map[string]*ssm.Client{
-		"us-west-1": ssm.NewFromConfig(getV2Config("us-west-1")),
-		"us-west-2": ssm.NewFromConfig(getV2Config("us-west-2")),
-		"us-east-1": ssm.NewFromConfig(getV2Config("us-east-1")),
+		"us-west-1": ssm.NewFromConfig(getV2Config("us-west-1", env)),
+		"us-west-2": ssm.NewFromConfig(getV2Config("us-west-2", env)),
+		"us-east-1": ssm.NewFromConfig(getV2Config("us-east-1", env)),
 	}
 }
 
@@ -135,6 +157,7 @@ type ParameterStore struct {
 	ParamRegion       string
 	ssmClients        map[string]*ssm.Client
 	maxResultsToQuery int64
+	env               string
 }
 
 // Create creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
@@ -425,11 +448,12 @@ func (s *ParameterStore) Delete(id SecretIdentifier) error {
 }
 
 // NewParameterStore creates a secret store that points at ParameterStore
-func NewParameterStore(maxResultsToQuery int64) *ParameterStore {
+func NewParameterStore(maxResultsToQuery int64, env string) *ParameterStore {
 	return &ParameterStore{
 		ParamRegion:       DefaultRegion,
-		ssmClients:        getAPIClients(),
+		ssmClients:        getAPIClients(env),
 		maxResultsToQuery: maxResultsToQuery,
+		env:               env,
 	}
 }
 
