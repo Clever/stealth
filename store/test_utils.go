@@ -18,7 +18,7 @@ func Stores() map[string]SecretStore {
 	// don't want to support
 	if !isCI() {
 		// maxResultsToQuery = 5 so that we test the pagination logic of the List command, in the ci-test env
-		stores["Paramstore"] = NewParameterStore(5, "ci-test")
+		stores["Paramstore"] = NewParameterStore(5, "ci-test", false)
 	}
 	return stores
 }

@@ -9,7 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	cred "github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
@@ -54,34 +54,55 @@ func (s *ParameterStore) GetOrderedRegions() []string {
 	}
 }
 
-func getV2Config(region string, env string) aws.Config {
-	cfg, err := config.LoadDefaultConfig(
-		context.TODO(),
-		config.WithRegion(region),
-		// force the SDK to use identityengineer SSO profile:
-		config.WithSharedConfigProfile("identityengineer"),
-	)
-
+func getV2Config(region string, env string, assume bool) aws.Config {
+	cfg, err := func() (aws.Config, error) {
+		if assume {
+			return config.LoadDefaultConfig(
+				context.TODO(),
+				config.WithRegion(region),
+				config.WithSharedConfigProfile("identityengineer"),
+			)
+		}
+		return config.LoadDefaultConfig(
+			context.TODO(),
+			config.WithRegion(region),
+		)
+	}()
 	if err != nil {
-		panic("unable to load SDK config, " + err.Error())
+		panic("Unable to load SDK config, " + err.Error())
 	}
 
-	// If this env maps to a SecretsManagement role, assume *only* that role.
-	if arn, ok := secretMgmtRoleByEnv[env]; ok {
-		stsClient := sts.NewFromConfig(cfg)
-		provider := stscreds.NewAssumeRoleProvider(stsClient, arn, func(o *stscreds.AssumeRoleOptions) {
-			o.RoleSessionName = "stealth-secretsmanagement"
-		})
-		cfg.Credentials = aws.NewCredentialsCache(provider)
+	if assume {
+		if arn, ok := secretMgmtRoleByEnv[env]; ok {
+			stsClient := sts.NewFromConfig(cfg)
+			out, err := stsClient.AssumeRole(
+				context.TODO(),
+				&sts.AssumeRoleInput{
+					RoleArn:         aws.String(arn),
+					RoleSessionName: aws.String("stealth-secretsmanagement"),
+				},
+			)
+			if err != nil {
+				panic("unable to assume SecretsManagement role: " + err.Error())
+			}
+			// static creds: never refresh, never re-AssumeRole
+			staticProvider := cred.NewStaticCredentialsProvider(
+				*out.Credentials.AccessKeyId,
+				*out.Credentials.SecretAccessKey,
+				*out.Credentials.SessionToken,
+			)
+			cfg.Credentials = staticProvider
+		}
 	}
+
 	return cfg
 }
 
-func getAPIClients(env string) map[string]*ssm.Client {
+func getAPIClients(env string, assume bool) map[string]*ssm.Client {
 	return map[string]*ssm.Client{
-		"us-west-1": ssm.NewFromConfig(getV2Config("us-west-1", env)),
-		"us-west-2": ssm.NewFromConfig(getV2Config("us-west-2", env)),
-		"us-east-1": ssm.NewFromConfig(getV2Config("us-east-1", env)),
+		"us-west-1": ssm.NewFromConfig(getV2Config("us-west-1", env, assume)),
+		"us-west-2": ssm.NewFromConfig(getV2Config("us-west-2", env, assume)),
+		"us-east-1": ssm.NewFromConfig(getV2Config("us-east-1", env, assume)),
 	}
 }
 
@@ -158,6 +179,7 @@ type ParameterStore struct {
 	ssmClients        map[string]*ssm.Client
 	maxResultsToQuery int64
 	env               string
+	assume            bool
 }
 
 // Create creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
@@ -448,12 +470,13 @@ func (s *ParameterStore) Delete(id SecretIdentifier) error {
 }
 
 // NewParameterStore creates a secret store that points at ParameterStore
-func NewParameterStore(maxResultsToQuery int64, env string) *ParameterStore {
+func NewParameterStore(maxResultsToQuery int64, env string, assume bool) *ParameterStore {
 	return &ParameterStore{
 		ParamRegion:       DefaultRegion,
-		ssmClients:        getAPIClients(env),
+		ssmClients:        getAPIClients(env, assume),
 		maxResultsToQuery: maxResultsToQuery,
 		env:               env,
+		assume:            assume,
 	}
 }
 
