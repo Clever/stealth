@@ -54,25 +54,30 @@ func (s *ParameterStore) GetOrderedRegions() []string {
 	}
 }
 
-func getV2Config(region string, env string, assumeProfile string) aws.Config {
-	cfg, err := func() (aws.Config, error) {
-		if assumeProfile != "" {
-			return config.LoadDefaultConfig(
-				context.TODO(),
-				config.WithRegion(region),
-				config.WithSharedConfigProfile(assumeProfile),
-			)
+func getV2Config(region string, env string, assume bool) aws.Config {
+	var cfg aws.Config
+	var err error
+	if assume {
+		profile := os.Getenv("AWS_PROFILE")
+		if profile == "" {
+			profile = "identityengineer" //default value if AWS_PROFILE isn't set
 		}
-		return config.LoadDefaultConfig(
+		cfg, err = config.LoadDefaultConfig(
+			context.TODO(),
+			config.WithRegion(region),
+			config.WithSharedConfigProfile(profile),
+		)
+	} else {
+		cfg, err = config.LoadDefaultConfig(
 			context.TODO(),
 			config.WithRegion(region),
 		)
-	}()
+	}
 	if err != nil {
 		panic("Unable to load SDK config, " + err.Error())
 	}
 
-	if assumeProfile != "" {
+	if assume {
 		if arn, ok := secretMgmtRoleByEnv[env]; ok {
 			stsClient := sts.NewFromConfig(cfg)
 			out, err := stsClient.AssumeRole(
@@ -98,11 +103,11 @@ func getV2Config(region string, env string, assumeProfile string) aws.Config {
 	return cfg
 }
 
-func getAPIClients(env string, assumeProfile string) map[string]*ssm.Client {
+func getAPIClients(env string, assume bool) map[string]*ssm.Client {
 	return map[string]*ssm.Client{
-		"us-west-1": ssm.NewFromConfig(getV2Config("us-west-1", env, assumeProfile)),
-		"us-west-2": ssm.NewFromConfig(getV2Config("us-west-2", env, assumeProfile)),
-		"us-east-1": ssm.NewFromConfig(getV2Config("us-east-1", env, assumeProfile)),
+		"us-west-1": ssm.NewFromConfig(getV2Config("us-west-1", env, assume)),
+		"us-west-2": ssm.NewFromConfig(getV2Config("us-west-2", env, assume)),
+		"us-east-1": ssm.NewFromConfig(getV2Config("us-east-1", env, assume)),
 	}
 }
 
@@ -179,7 +184,7 @@ type ParameterStore struct {
 	ssmClients        map[string]*ssm.Client
 	maxResultsToQuery int64
 	env               string
-	assumeProfile     string
+	assume            bool
 }
 
 // Create creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
@@ -470,13 +475,13 @@ func (s *ParameterStore) Delete(id SecretIdentifier) error {
 }
 
 // NewParameterStore creates a secret store that points at ParameterStore
-func NewParameterStore(maxResultsToQuery int64, env string, assumeProfile string) *ParameterStore {
+func NewParameterStore(maxResultsToQuery int64, env string, assume bool) *ParameterStore {
 	return &ParameterStore{
 		ParamRegion:       DefaultRegion,
-		ssmClients:        getAPIClients(env, assumeProfile),
+		ssmClients:        getAPIClients(env, assume),
 		maxResultsToQuery: maxResultsToQuery,
 		env:               env,
-		assumeProfile:     assumeProfile,
+		assume:            assume,
 	}
 }
 
