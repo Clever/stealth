@@ -47,7 +47,7 @@ Stealth works with the IdentityEngineer SSO Role/Profile to write to the operati
     ./stealth write --assume --environment [production OR development] -- service [service-name] --key [key name] --value [key value]
 ```
 
-If you're using the --assume flag and you are encountering permission issues, try:
+If you're using the --assume flag and you are encountering permission issues, try the following before running stealth again:
 
 ```bash
     export AWS_PROFILE=[IdentityEngineer Profile Name]
