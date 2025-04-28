@@ -35,15 +35,14 @@ var (
 	cmdHealth         = app.Command("health", "Checks for health of all secrets for a service across 4 AWS regions, ensuring there is no discrepancies in values.")
 	healthEnvironment = cmdHealth.Flag("environment", "Environment that the secret belongs to.").Required().String()
 	healthService     = cmdHealth.Flag("service", "Service that the key belongs to.").Required().String()
-
-	assumeRole = app.Flag("assume", "If set, stealth will assume the SecretsManagement role (based on --environment)").Bool()
+	assumeProfile     = app.Flag("assume-profile", "If set, stealth will use this AWS CLI profile for SSO and assume the SecretsManagement role for the given --environment.").String()
 )
 
 func main() {
 	command := kingpin.MustParse(app.Parse(os.Args[1:]))
 	switch command {
 	case cmdDupes.FullCommand():
-		s := store.NewParameterStore(50, *dupeEnvironment, *assumeRole)
+		s := store.NewParameterStore(50, *dupeEnvironment, *assumeProfile)
 		id := store.SecretIdentifier{Environment: getEnvironment(*dupeEnvironment), Service: *dupeService, Key: *dupeKey}
 		envs := []store.Environment{store.DevelopmentEnvironment, store.ProductionEnvironment}
 
@@ -68,14 +67,14 @@ func main() {
 			}
 		}
 	case cmdDelete.FullCommand():
-		s := store.NewParameterStore(50, *deleteEnvironment, *assumeRole)
+		s := store.NewParameterStore(50, *deleteEnvironment, *assumeProfile)
 		id := store.SecretIdentifier{Environment: getEnvironment(*deleteEnvironment), Service: *deleteService, Key: *deleteKey}
 		if askForConfirmation("Are you sure you want to delete the secret " + id.String() + "?") {
 			s.Delete(id)
 		}
 
 	case cmdWrite.FullCommand():
-		s := store.NewParameterStore(50, *writeEnvironment, *assumeRole)
+		s := store.NewParameterStore(50, *writeEnvironment, *assumeProfile)
 		id := store.SecretIdentifier{Environment: getEnvironment(*writeEnvironment), Service: *writeService, Key: *writeKey}
 		// TODO: allow value to be a pointer to a file, or stdin
 		if err := createOrUpdate(s, id, *writeValue); err != nil {
@@ -84,7 +83,7 @@ func main() {
 		fmt.Printf("Wrote secret %s\n", id.String())
 
 	case cmdHealth.FullCommand():
-		s := store.NewParameterStore(50, *healthEnvironment, *assumeRole)
+		s := store.NewParameterStore(50, *healthEnvironment, *assumeProfile)
 		var stateOfSecrets = map[string]string{}
 		for _, region := range s.GetOrderedRegions() {
 			s.ParamRegion = region

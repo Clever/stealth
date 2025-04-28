@@ -54,13 +54,13 @@ func (s *ParameterStore) GetOrderedRegions() []string {
 	}
 }
 
-func getV2Config(region string, env string, assume bool) aws.Config {
+func getV2Config(region string, env string, assumeProfile string) aws.Config {
 	cfg, err := func() (aws.Config, error) {
-		if assume {
+		if assumeProfile != "" {
 			return config.LoadDefaultConfig(
 				context.TODO(),
 				config.WithRegion(region),
-				config.WithSharedConfigProfile("identityengineer"),
+				config.WithSharedConfigProfile(assumeProfile),
 			)
 		}
 		return config.LoadDefaultConfig(
@@ -72,7 +72,7 @@ func getV2Config(region string, env string, assume bool) aws.Config {
 		panic("Unable to load SDK config, " + err.Error())
 	}
 
-	if assume {
+	if assumeProfile != "" {
 		if arn, ok := secretMgmtRoleByEnv[env]; ok {
 			stsClient := sts.NewFromConfig(cfg)
 			out, err := stsClient.AssumeRole(
@@ -98,11 +98,11 @@ func getV2Config(region string, env string, assume bool) aws.Config {
 	return cfg
 }
 
-func getAPIClients(env string, assume bool) map[string]*ssm.Client {
+func getAPIClients(env string, assumeProfile string) map[string]*ssm.Client {
 	return map[string]*ssm.Client{
-		"us-west-1": ssm.NewFromConfig(getV2Config("us-west-1", env, assume)),
-		"us-west-2": ssm.NewFromConfig(getV2Config("us-west-2", env, assume)),
-		"us-east-1": ssm.NewFromConfig(getV2Config("us-east-1", env, assume)),
+		"us-west-1": ssm.NewFromConfig(getV2Config("us-west-1", env, assumeProfile)),
+		"us-west-2": ssm.NewFromConfig(getV2Config("us-west-2", env, assumeProfile)),
+		"us-east-1": ssm.NewFromConfig(getV2Config("us-east-1", env, assumeProfile)),
 	}
 }
 
@@ -179,7 +179,7 @@ type ParameterStore struct {
 	ssmClients        map[string]*ssm.Client
 	maxResultsToQuery int64
 	env               string
-	assume            bool
+	assumeProfile     string
 }
 
 // Create creates a Secret in the secret store. Version is guaranteed to be zero if no error is returned.
@@ -470,13 +470,13 @@ func (s *ParameterStore) Delete(id SecretIdentifier) error {
 }
 
 // NewParameterStore creates a secret store that points at ParameterStore
-func NewParameterStore(maxResultsToQuery int64, env string, assume bool) *ParameterStore {
+func NewParameterStore(maxResultsToQuery int64, env string, assumeProfile string) *ParameterStore {
 	return &ParameterStore{
 		ParamRegion:       DefaultRegion,
-		ssmClients:        getAPIClients(env, assume),
+		ssmClients:        getAPIClients(env, assumeProfile),
 		maxResultsToQuery: maxResultsToQuery,
 		env:               env,
-		assume:            assume,
+		assumeProfile:     assumeProfile,
 	}
 }
 
