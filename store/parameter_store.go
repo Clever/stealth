@@ -362,7 +362,16 @@ func (s *ParameterStore) List(env Environment, service string) ([]SecretIdentifi
 		// retry again in a second
 		time.Sleep(1 * time.Second)
 	}
-	return results, nil
+	// collapse any duplicate SecretIdentifiers (same Env,Service,Key)
+	unique := make(map[SecretIdentifier]struct{}, len(results))
+	deduped := make([]SecretIdentifier, 0, len(results))
+	for _, ident := range results {
+		if _, seen := unique[ident]; !seen {
+			unique[ident] = struct{}{}
+			deduped = append(deduped, ident)
+		}
+	}
+	return deduped, nil
 }
 
 // ListAll gets all secrets within a environment (env)>
