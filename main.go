@@ -148,13 +148,16 @@ func askForConfirmation(s string) bool {
 }
 
 func createOrUpdate(s store.SecretStore, id store.SecretIdentifier, value string) error {
-	err := s.Create(id, value)
+	var err error
+
+	err = s.Create(id, value)
 	if err != nil {
 		if _, ok := err.(*store.IdentifierAlreadyExistsError); !ok {
 			return err
+		} else {
+			_, err = s.Update(id, value)
 		}
 	}
 
-	_, err = s.Update(id, value)
 	return err
 }

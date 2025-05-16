@@ -95,7 +95,7 @@ func (s *MemoryStore) List(env Environment, service string) ([]SecretIdentifier,
 
 // ListAll gets all secret identifiers within an environment
 func (s *MemoryStore) ListAll(env Environment) ([]SecretIdentifier, error) {
-	// validate environment; avoids a panic looking up Unicreds path below
+	// validate environment; avoids a panic looking up secrets path below
 	if !isValidEnvironmentInt(env) {
 		return []SecretIdentifier{}, fmt.Errorf("env %d is invalid", env)
 	}
